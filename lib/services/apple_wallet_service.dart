@@ -137,26 +137,26 @@ class AppleWalletService {
   Map<String, dynamic> _generatePassData(LoyaltyCard card) {
     return {
       'formatVersion': 1,
-      'passTypeIdentifier': AppleWalletConfig.passTypeId,
+      'passTypeIdentifier': 'pass.com.loyalty.app',
       'serialNumber': card.id,
-      'teamIdentifier': AppleWalletConfig.teamId,
-      'organizationName': AppleWalletConfig.organizationName,
-      'description': AppleWalletConfig.passDescription,
-      'logoText': AppleWalletConfig.passName,
-      'foregroundColor': AppleWalletConfig.foregroundColor,
+      'teamIdentifier': 'URUB7FFTTD',
+      'organizationName': 'Loyalty App',
+      'description': 'Loyalty Card',
+      'logoText': 'Loyalty Card',
+      'foregroundColor': 'rgb(255, 255, 255)',
       'backgroundColor': card.backgroundColor,
-      'labelColor': AppleWalletConfig.labelColor,
+      'labelColor': 'rgb(255, 255, 255)',
       'barcode': {
         'message': card.barcodeValue,
-        'format': AppleWalletConfig.barcodeFormat,
-        'messageEncoding': AppleWalletConfig.barcodeEncoding,
+        'format': 'PKBarcodeFormatQR',
+        'messageEncoding': 'iso-8859-1',
         'altText': card.barcodeValue,
       },
       'barcodes': [
         {
           'message': card.barcodeValue,
-          'format': AppleWalletConfig.barcodeFormat,
-          'messageEncoding': AppleWalletConfig.barcodeEncoding,
+          'format': 'PKBarcodeFormatQR',
+          'messageEncoding': 'iso-8859-1',
           'altText': card.barcodeValue,
         }
       ],
@@ -191,17 +191,17 @@ class AppleWalletService {
           {
             'key': 'terms',
             'label': 'TERMS & CONDITIONS',
-            'value': AppleWalletConfig.termsAndConditions,
+            'value': 'This is a loyalty card for our app. Points can be redeemed for rewards.',
           },
           {
             'key': 'contact',
             'label': 'CONTACT',
-            'value': 'For support, contact us at ${AppleWalletConfig.supportEmail}',
+            'value': 'For support, contact us at support@loyaltyapp.com',
           }
         ]
       },
       'relevantDate': DateTime.now().toIso8601String(),
-      'expirationDate': DateTime.now().add(Duration(days: AppleWalletConfig.passValidityDays)).toIso8601String(),
+      'expirationDate': DateTime.now().add(Duration(days: 365)).toIso8601String(),
     };
   }
 
