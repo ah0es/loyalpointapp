@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 import '../models/loyalty_card.dart';
 import '../config/apple_wallet_config.dart';
-import 'github_apple_wallet_service.dart';
+import 'firebase_apple_wallet_service.dart';
 
 /// Apple Wallet Service
 ///
@@ -384,12 +384,12 @@ class AppleWalletService {
       final passBytes = await file.readAsBytes();
 
       try {
-        // Check if GitHub is configured
-        if (GitHubAppleWalletService.isConfigured) {
-          // Upload to GitHub and get public URL
-          final appleWalletUrl = await GitHubAppleWalletService.generateAppleWalletUrl(passPath, passId);
+        // Check if Firebase is configured
+        if (FirebaseAppleWalletService.isConfigured) {
+          // Upload to Firebase and get public URL
+          final appleWalletUrl = await FirebaseAppleWalletService.generateAppleWalletUrl(passPath, passId);
 
-          log('🍎 Apple Wallet URL created via GitHub');
+          log('🍎 Apple Wallet URL created via Firebase');
           log('📊 Pass size: ${passBytes.length} bytes');
           log('🔗 Apple Wallet URL: $appleWalletUrl');
           log('📱 iPhone will open this URL in Safari');
@@ -397,14 +397,14 @@ class AppleWalletService {
 
           return appleWalletUrl;
         } else {
-          log('❌ GitHub not configured - cannot generate Apple Wallet URL');
+          log('❌ Firebase not configured - cannot generate Apple Wallet URL');
           log('📋 Setup instructions:');
-          log(GitHubAppleWalletService.setupInstructions);
-          throw Exception('GitHub service not configured. Please set up GitHub token.');
+          log(FirebaseAppleWalletService.setupInstructions);
+          throw Exception('Firebase service not configured. Please set up Firebase.');
         }
-      } catch (githubError) {
-        log('❌ GitHub upload failed: $githubError');
-        log('❌ Cannot generate Apple Wallet URL without successful GitHub upload');
+      } catch (firebaseError) {
+        log('❌ Firebase upload failed: $firebaseError');
+        log('❌ Cannot generate Apple Wallet URL without successful Firebase upload');
         rethrow;
       }
     } catch (e) {
