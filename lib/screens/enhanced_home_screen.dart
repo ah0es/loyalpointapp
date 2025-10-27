@@ -433,7 +433,10 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => _addToWallet(),
+                      onPressed: () {
+                        print('🎯 Button pressed!');
+                        _addToWallet();
+                      },
                       icon: Icon(_walletResult!.type == WalletType.apple ? Icons.language : Icons.open_in_browser),
                       label: Text(_walletResult!.type == WalletType.apple ? 'Open in Safari' : 'Add to Google Wallet'),
                       style: ElevatedButton.styleFrom(
@@ -691,12 +694,24 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
 
   /// Add pass to wallet
   Future<void> _addToWallet() async {
-    if (_walletResult == null) return;
+    print('🎯 _addToWallet called');
+    print('🎯 _walletResult: $_walletResult');
+
+    if (_walletResult == null) {
+      print('❌ _walletResult is null');
+      return;
+    }
+
+    print('🎯 Wallet type: ${_walletResult!.type}');
+    print('🎯 Wallet data: ${_walletResult!.data}');
 
     try {
+      print('🎯 Calling _walletService.addPassToWallet...');
       final success = await _walletService.addPassToWallet(_walletResult!);
+      print('🎯 addPassToWallet result: $success');
 
       if (success) {
+        print('✅ Wallet operation successful');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_walletResult!.type == WalletType.apple ? 'Opening Safari to download pass...' : 'Opening Google Wallet...'),
@@ -704,6 +719,7 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
           ),
         );
       } else {
+        print('❌ Wallet operation failed');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to add pass to wallet'),
@@ -712,6 +728,7 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
         );
       }
     } catch (e) {
+      print('❌ Error in _addToWallet: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error adding pass to wallet: $e'),

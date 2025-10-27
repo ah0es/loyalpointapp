@@ -135,6 +135,12 @@ class UnifiedWalletService {
   /// Add pass to wallet
   Future<bool> addPassToWallet(WalletPassResult result) async {
     try {
+      log('🎯 addPassToWallet called');
+      log('🎯 Result success: ${result.success}');
+      log('🎯 Result type: ${result.type}');
+      log('🎯 Result data: ${result.data}');
+      log('🎯 Result message: ${result.message}');
+
       if (!result.success || result.data == null) {
         log('❌ Cannot add pass to wallet: ${result.message}');
         return false;
@@ -144,12 +150,17 @@ class UnifiedWalletService {
         case WalletType.apple:
           // For Apple Wallet, open the URL in Safari
           log('🍎 Opening Apple Wallet pass in Safari: ${result.data}');
-          return await _appleWalletService.openPassInSafari(result.data!);
+          log('🍎 Calling _appleWalletService.openPassInSafari...');
+          final success = await _appleWalletService.openPassInSafari(result.data!);
+          log('🍎 openPassInSafari result: $success');
+          return success;
         case WalletType.google:
+          log('🤖 Opening Google Wallet pass: ${result.data}');
           return await _googleWalletService.launchSaveUrl(result.data!);
       }
     } catch (e) {
       log('❌ Error adding pass to wallet: $e');
+      log('❌ Full error details: ${e.toString()}');
       return false;
     }
   }
