@@ -393,7 +393,7 @@ class AppleWalletService {
       final serverDir = Directory('${documentsDir.path}/passes');
       log('📁 Documents directory: ${documentsDir.path}');
       log('📁 Server directory: ${serverDir.path}');
-      
+
       if (!await serverDir.exists()) {
         log('📁 Creating server directory...');
         await serverDir.create(recursive: true);
