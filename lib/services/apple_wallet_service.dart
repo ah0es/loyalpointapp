@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 import '../models/loyalty_card.dart';
 import '../config/apple_wallet_config.dart';
-import 'firebase_apple_wallet_service.dart';
+import 'supabase_apple_wallet_service.dart';
 
 /// Apple Wallet Service
 ///
@@ -384,12 +384,12 @@ class AppleWalletService {
       final passBytes = await file.readAsBytes();
 
       try {
-        // Check if Firebase is configured
-        if (FirebaseAppleWalletService.isConfigured) {
-          // Upload to Firebase and get public URL
-          final appleWalletUrl = await FirebaseAppleWalletService.generateAppleWalletUrl(passPath, passId);
+        // Check if Supabase is configured
+        if (SupabaseAppleWalletService.isConfigured) {
+          // Upload to Supabase and get public URL
+          final appleWalletUrl = await SupabaseAppleWalletService.generateAppleWalletUrl(passPath, passId);
 
-          log('🍎 Apple Wallet URL created via Firebase');
+          log('🍎 Apple Wallet URL created via Supabase');
           log('📊 Pass size: ${passBytes.length} bytes');
           log('🔗 Apple Wallet URL: $appleWalletUrl');
           log('📱 iPhone will open this URL in Safari');
@@ -397,14 +397,14 @@ class AppleWalletService {
 
           return appleWalletUrl;
         } else {
-          log('❌ Firebase not configured - cannot generate Apple Wallet URL');
+          log('❌ Supabase not configured - cannot generate Apple Wallet URL');
           log('📋 Setup instructions:');
-          log(FirebaseAppleWalletService.setupInstructions);
-          throw Exception('Firebase service not configured. Please set up Firebase.');
+          log(SupabaseAppleWalletService.setupInstructions);
+          throw Exception('Supabase service not configured. Please set up Supabase.');
         }
-      } catch (firebaseError) {
-        log('❌ Firebase upload failed: $firebaseError');
-        log('❌ Cannot generate Apple Wallet URL without successful Firebase upload');
+      } catch (supabaseError) {
+        log('❌ Supabase upload failed: $supabaseError');
+        log('❌ Cannot generate Apple Wallet URL without successful Supabase upload');
         rethrow;
       }
     } catch (e) {
