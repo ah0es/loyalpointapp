@@ -50,11 +50,8 @@ class AppleWalletService {
         log('✅ Apple Wallet pass URL generated: $passUrl');
         return passUrl;
       } catch (urlError) {
-        log('⚠️ Error generating Apple Wallet URL, using fallback: $urlError');
-        // Fallback: create a minimal data URL
-        final fallbackUrl = 'data:application/vnd.apple.pkpass;base64,PLACEHOLDER_PASS_DATA';
-        log('🔄 Using fallback data URL');
-        return fallbackUrl;
+        log('❌ Error generating Apple Wallet URL: $urlError');
+        rethrow;
       }
     } catch (e) {
       log('❌ Error generating Apple Wallet pass URL: $e');
@@ -400,26 +397,15 @@ class AppleWalletService {
 
           return appleWalletUrl;
         } else {
-          log('⚠️ GitHub not configured, using placeholder URL');
+          log('❌ GitHub not configured - cannot generate Apple Wallet URL');
           log('📋 Setup instructions:');
           log(GitHubAppleWalletService.setupInstructions);
-
-          // Fallback: Use placeholder URL for testing
-          final placeholderUrl = 'https://ah0es.github.io/loyalpointapp/passes/$passId.pkpass';
-          log('🔗 Using placeholder URL: $placeholderUrl');
-          log('⚠️ Note: Configure GitHub service for real functionality');
-
-          return placeholderUrl;
+          throw Exception('GitHub service not configured. Please set up GitHub token.');
         }
       } catch (githubError) {
-        log('⚠️ GitHub upload failed, using placeholder URL: $githubError');
-
-        // Fallback: Use placeholder URL for testing
-        final placeholderUrl = 'https://ah0es.github.io/loyalpointapp/passes/$passId.pkpass';
-        log('🔗 Using placeholder URL: $placeholderUrl');
-        log('⚠️ Note: Configure GitHub service for real functionality');
-
-        return placeholderUrl;
+        log('❌ GitHub upload failed: $githubError');
+        log('❌ Cannot generate Apple Wallet URL without successful GitHub upload');
+        rethrow;
       }
     } catch (e) {
       log('❌ Error generating Apple Wallet URL: $e');
