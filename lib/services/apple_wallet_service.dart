@@ -405,7 +405,7 @@ class AppleWalletService {
           log(GitHubAppleWalletService.setupInstructions);
 
           // Fallback: Use placeholder URL for testing
-          final placeholderUrl = 'https://your-username.github.io/loyalty-passes/passes/$passId.pkpass';
+          final placeholderUrl = 'https://ah0es.github.io/loyalpointapp/passes/$passId.pkpass';
           log('🔗 Using placeholder URL: $placeholderUrl');
           log('⚠️ Note: Configure GitHub service for real functionality');
 
@@ -415,7 +415,7 @@ class AppleWalletService {
         log('⚠️ GitHub upload failed, using placeholder URL: $githubError');
 
         // Fallback: Use placeholder URL for testing
-        final placeholderUrl = 'https://your-username.github.io/loyalty-passes/passes/$passId.pkpass';
+        final placeholderUrl = 'https://ah0es.github.io/loyalpointapp/passes/$passId.pkpass';
         log('🔗 Using placeholder URL: $placeholderUrl');
         log('⚠️ Note: Configure GitHub service for real functionality');
 
