@@ -156,7 +156,7 @@ class AppleWalletService {
     log('   Description: ${AppleWalletConfig.passDescription}');
     log('   Web Service URL: ${AppleWalletConfig.webServiceUrl}');
     log('   Auth Token: ${AppleWalletConfig.authenticationToken}');
-    
+
     final passData = {
       'formatVersion': 1,
       'passTypeIdentifier': AppleWalletConfig.passTypeId,
@@ -223,12 +223,12 @@ class AppleWalletService {
       'webServiceURL': AppleWalletConfig.webServiceUrl, // Web service URL for pass updates
       'authenticationToken': AppleWalletConfig.authenticationToken, // Authentication token for web service
     };
-    
+
     log('✅ Pass data structure created successfully');
     log('📊 Pass data keys: ${passData.keys.toList()}');
     log('📊 Store card fields: ${(passData['storeCard'] as Map<String, dynamic>).keys.toList()}');
     log('📊 Barcodes: ${(passData['barcodes'] as List).length} barcode(s)');
-    
+
     return passData;
   }
 
