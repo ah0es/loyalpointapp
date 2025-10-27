@@ -382,7 +382,7 @@ class AppleWalletService {
       // In production: Upload to web server and return public URL
       final file = File(passPath);
 
-      // Apple Wallet approach: Upload to Firebase and get public URL
+      // Apple Wallet approach: Upload to GitHub and get public URL
       final passId = loyaltyCard.id;
       final passBytes = await file.readAsBytes();
 

@@ -48,9 +48,9 @@ dependencies:
   archive: ^3.4.0
   path_provider: ^2.1.1
   
-  # Firebase for Apple Wallet hosting
-  firebase_core: ^2.24.2
-  firebase_storage: ^11.5.6
+  # Firebase for Apple Wallet hosting (removed - using GitHub instead)
+  # firebase_core: ^2.24.2
+  # firebase_storage: ^11.5.6
   
   # Note: For production Apple Wallet integration, you'll need:
   # - Apple Developer account
