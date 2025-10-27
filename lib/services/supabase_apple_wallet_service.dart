@@ -28,6 +28,27 @@ class SupabaseAppleWalletService {
       final file = File(localFilePath);
       final fileBytes = await file.readAsBytes();
 
+      log('📊 File size to upload: ${fileBytes.length} bytes');
+      log('📊 File exists: ${await file.exists()}');
+      log('📊 File readable: ${await file.exists()}');
+
+      // Check file content before upload
+      if (fileBytes.isNotEmpty) {
+        log('✅ File has content');
+        // Check for ZIP signature
+        if (fileBytes.length >= 4 && fileBytes[0] == 0x50 && fileBytes[1] == 0x4B) {
+          log('✅ File appears to be a valid ZIP/PKPass file');
+          log('📊 ZIP signature: ${fileBytes[0].toRadixString(16)} ${fileBytes[1].toRadixString(16)}');
+        } else {
+          log('❌ File is not a valid PKPass file (missing ZIP signature)');
+          log('📊 First 4 bytes: ${fileBytes.take(4).map((b) => b.toRadixString(16)).join(' ')}');
+          log('📋 Expected: 50 4B (PK signature)');
+        }
+      } else {
+        log('❌ File is empty - cannot upload');
+        throw Exception('PKPass file is empty');
+      }
+
       // Supabase Storage upload URL
       final uploadUrl = '$_supabaseUrl/storage/v1/object/$_bucketName/$passId.pkpass';
 
@@ -43,6 +64,10 @@ class SupabaseAppleWalletService {
         body: fileBytes,
       );
 
+      log('📊 Upload response status: ${response.statusCode}');
+      log('📊 Upload response headers: ${response.headers}');
+      log('📊 Upload response body: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Get the public URL
         final publicUrl = '$_baseUrl/$passId.pkpass';
@@ -50,12 +75,31 @@ class SupabaseAppleWalletService {
         log('📊 Uploaded file size: ${fileBytes.length} bytes');
         log('🔗 Public URL: $publicUrl');
         log('📱 This URL should be accessible from Safari/Chrome');
+
+        // Test the public URL immediately
+        log('🧪 Testing public URL immediately after upload...');
+        try {
+          final testResponse = await http.get(Uri.parse(publicUrl));
+          log('📊 Test response status: ${testResponse.statusCode}');
+          log('📊 Test response content-type: ${testResponse.headers['content-type']}');
+          log('📊 Test response size: ${testResponse.bodyBytes.length} bytes');
+
+          if (testResponse.statusCode == 200) {
+            log('✅ Public URL is immediately accessible');
+          } else {
+            log('⚠️ Public URL not immediately accessible (may need time to propagate)');
+          }
+        } catch (e) {
+          log('⚠️ Error testing public URL: $e');
+        }
+
         return publicUrl;
       } else {
         log('❌ Supabase upload failed:');
         log('   Status Code: ${response.statusCode}');
         log('   Response Body: ${response.body}');
         log('   File Size: ${fileBytes.length} bytes');
+        log('   Upload URL: $uploadUrl');
         throw Exception('Supabase Storage error: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {

@@ -570,34 +570,6 @@ class AppleWalletService {
     ]);
   }
 
-  /// Create more realistic signature structure
-  Uint8List _createRealisticSignature(Uint8List manifestBytes) {
-    // This creates a more realistic PKCS#7 signature structure
-    // It's still not cryptographically valid, but has better structure
-    final signature = <int>[];
-
-    // PKCS#7 SignedData structure
-    signature.addAll([0x30, 0x82]); // SEQUENCE
-    signature.addAll([0x00, 0x50]); // Length placeholder
-
-    // Version
-    signature.addAll([0x02, 0x01, 0x01]); // INTEGER 1
-
-    // DigestAlgorithms
-    signature.addAll([0x31, 0x0D]); // SET
-    signature.addAll([0x30, 0x0B]); // SEQUENCE
-    signature.addAll([0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]); // SHA-256 OID
-
-    // ContentInfo
-    signature.addAll([0x30, 0x1D]); // SEQUENCE
-    signature.addAll([0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x01]); // Data OID
-    signature.addAll([0xA0, 0x10]); // IMPLICIT
-    signature.addAll([0x04, 0x0E]); // OCTET STRING
-    signature.addAll(manifestBytes.take(14).toList()); // Partial manifest
-
-    return Uint8List.fromList(signature);
-  }
-
   /// Validate pass structure before creating PKPass file
   Future<void> _validatePassStructure(String passDir) async {
     try {
@@ -870,30 +842,54 @@ class AppleWalletService {
       log('🍎 Opening Apple Wallet pass in Safari...');
       log('🔗 URL: $passUrl');
 
+      // First, test the URL before opening
+      log('🧪 Testing URL before opening in Safari...');
+      final urlTestResult = await testPassUrl(passUrl);
+      if (!urlTestResult) {
+        log('❌ URL test failed - Safari will likely show download error');
+        log('📋 This explains why Safari cannot download the file');
+        return false;
+      }
+
       final uri = Uri.parse(passUrl);
+      log('🔍 Parsed URI: $uri');
+      log('🔍 URI scheme: ${uri.scheme}');
+      log('🔍 URI host: ${uri.host}');
+      log('🔍 URI path: ${uri.path}');
 
       // Check if the URL can be launched
-      if (await canLaunchUrl(uri)) {
+      log('🔍 Checking if URL can be launched...');
+      final canLaunch = await canLaunchUrl(uri);
+      log('🔍 Can launch URL: $canLaunch');
+
+      if (canLaunch) {
+        log('🚀 Launching URL in Safari...');
         final launched = await launchUrl(
           uri,
           mode: LaunchMode.externalApplication, // Opens in Safari
         );
 
+        log('🔍 Launch result: $launched');
+
         if (launched) {
           log('✅ Successfully opened pass URL in Safari');
           log('📱 Safari should now download the .pkpass file');
           log('📱 When downloaded, tap the file to add to Apple Wallet');
+          log('⚠️ If Safari shows "cannot download" error, check the URL test results above');
           return true;
         } else {
           log('❌ Failed to launch URL in Safari');
+          log('📋 This means Safari opened but couldn\'t handle the URL');
           return false;
         }
       } else {
         log('❌ Cannot launch URL: $passUrl');
+        log('📋 This means the URL format is invalid or not supported');
         return false;
       }
     } catch (e) {
       log('❌ Error opening pass in Safari: $e');
+      log('📋 Full error details: ${e.toString()}');
       return false;
     }
   }
@@ -926,18 +922,42 @@ class AppleWalletService {
       log('🧪 Testing pass URL accessibility...');
       log('🔗 URL: $passUrl');
 
+      // Parse and validate URL
+      final uri = Uri.parse(passUrl);
+      log('🔍 Parsed URI: $uri');
+      log('🔍 Scheme: ${uri.scheme} (should be https)');
+      log('🔍 Host: ${uri.host}');
+      log('🔍 Path: ${uri.path}');
+      log('🔍 Query: ${uri.query}');
+
+      if (uri.scheme != 'https') {
+        log('❌ URL scheme is not HTTPS: ${uri.scheme}');
+        log('📋 Safari requires HTTPS for downloads');
+        return false;
+      }
+
       // Test the URL with HTTP request
-      final response = await http.get(Uri.parse(passUrl));
+      log('🌐 Making HTTP request to test URL...');
+      final response = await http.get(uri);
 
       log('📊 HTTP Status: ${response.statusCode}');
       log('📊 Content-Type: ${response.headers['content-type']}');
       log('📊 Content-Length: ${response.headers['content-length']}');
       log('📊 Response Size: ${response.bodyBytes.length} bytes');
+      log('📊 All Headers: ${response.headers}');
 
       if (response.statusCode == 200) {
         log('✅ URL is accessible');
-        log('📱 Test this URL in Safari: $passUrl');
-        log('📱 Expected behavior: Safari should download the .pkpass file');
+
+        // Check content type
+        final contentType = response.headers['content-type'];
+        if (contentType == 'application/vnd.apple.pkpass') {
+          log('✅ Correct MIME type: $contentType');
+        } else {
+          log('⚠️ Unexpected MIME type: $contentType');
+          log('📋 Expected: application/vnd.apple.pkpass');
+          log('📋 This might cause Safari download issues');
+        }
 
         // Check if it's actually a PKPass file
         if (response.bodyBytes.isNotEmpty) {
@@ -945,19 +965,30 @@ class AppleWalletService {
           // Check for ZIP signature (PKPass files are ZIP archives)
           if (response.bodyBytes.length >= 4 && response.bodyBytes[0] == 0x50 && response.bodyBytes[1] == 0x4B) {
             log('✅ File appears to be a valid ZIP/PKPass file');
+            log('📊 ZIP signature: ${response.bodyBytes[0].toRadixString(16)} ${response.bodyBytes[1].toRadixString(16)}');
           } else {
-            log('⚠️ File may not be a valid PKPass file (missing ZIP signature)');
+            log('❌ File is not a valid PKPass file (missing ZIP signature)');
+            log('📊 First 4 bytes: ${response.bodyBytes.take(4).map((b) => b.toRadixString(16)).join(' ')}');
+            log('📋 Expected: 50 4B (PK signature)');
+            return false;
           }
         } else {
           log('❌ File is empty');
+          return false;
         }
+
+        log('📱 Test this URL in Safari: $passUrl');
+        log('📱 Expected behavior: Safari should download the .pkpass file');
       } else {
         log('❌ URL is not accessible (Status: ${response.statusCode})');
+        log('📊 Response body: ${response.body}');
+        return false;
       }
 
       return response.statusCode == 200;
     } catch (e) {
       log('❌ Error testing pass URL: $e');
+      log('📋 Full error details: ${e.toString()}');
       return false;
     }
   }
