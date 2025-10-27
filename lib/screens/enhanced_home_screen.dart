@@ -423,7 +423,7 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
                 ),
                 const SizedBox(height: 20),
                 const Text(
-                  'Scan this QR code with your iPhone camera to add the loyalty card to Apple Wallet',
+                  'Scan this QR code with your iPhone camera or tap "Open in Safari" to download the pass',
                   style: TextStyle(fontSize: 16, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
@@ -434,8 +434,8 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () => _addToWallet(),
-                      icon: Icon(_walletResult!.type == WalletType.apple ? Icons.phone_iphone : Icons.open_in_browser),
-                      label: Text(_walletResult!.type == WalletType.apple ? 'Add to Apple Wallet' : 'Add to Google Wallet'),
+                      icon: Icon(_walletResult!.type == WalletType.apple ? Icons.language : Icons.open_in_browser),
+                      label: Text(_walletResult!.type == WalletType.apple ? 'Open in Safari' : 'Add to Google Wallet'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _walletResult!.type == WalletType.apple ? Colors.black : const Color(0xFF34A853),
                         foregroundColor: Colors.white,
@@ -699,7 +699,7 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_walletResult!.type == WalletType.apple ? 'Pass added to Apple Wallet successfully!' : 'Opening Google Wallet...'),
+            content: Text(_walletResult!.type == WalletType.apple ? 'Opening Safari to download pass...' : 'Opening Google Wallet...'),
             backgroundColor: Colors.green,
           ),
         );

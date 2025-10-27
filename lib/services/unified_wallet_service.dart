@@ -142,14 +142,31 @@ class UnifiedWalletService {
 
       switch (result.type) {
         case WalletType.apple:
-          // For Apple Wallet, we don't need to add directly - the URL is for QR scanning
-          log('🍎 Apple Wallet URL generated for QR scanning: ${result.data}');
-          return true;
+          // For Apple Wallet, open the URL in Safari
+          log('🍎 Opening Apple Wallet pass in Safari: ${result.data}');
+          return await _appleWalletService.openPassInSafari(result.data!);
         case WalletType.google:
           return await _googleWalletService.launchSaveUrl(result.data!);
       }
     } catch (e) {
       log('❌ Error adding pass to wallet: $e');
+      return false;
+    }
+  }
+
+  /// Open Apple Wallet pass in Safari (convenience method)
+  Future<bool> openAppleWalletPass({
+    required String customerName,
+    required int points,
+  }) async {
+    try {
+      log('🍎 Opening Apple Wallet pass in Safari...');
+      return await _appleWalletService.generateAndOpenPass(
+        customerName: customerName,
+        points: points,
+      );
+    } catch (e) {
+      log('❌ Error opening Apple Wallet pass: $e');
       return false;
     }
   }

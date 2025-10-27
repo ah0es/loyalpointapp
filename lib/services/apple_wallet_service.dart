@@ -9,6 +9,7 @@ import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../models/loyalty_card.dart';
 import '../config/apple_wallet_config.dart';
 import 'supabase_apple_wallet_service.dart';
@@ -278,6 +279,10 @@ class AppleWalletService {
       await passDir.delete(recursive: true);
 
       log('✅ Apple Wallet pass created: ${pkpassFile.path}');
+
+      // Test the pass file for simulator
+      await testPassInSimulator(pkpassFile.path);
+
       return pkpassFile.path;
     } catch (e) {
       log('❌ Error creating PKPass file: $e');
@@ -859,6 +864,62 @@ class AppleWalletService {
     }
   }
 
+  /// Open Apple Wallet pass URL in Safari
+  Future<bool> openPassInSafari(String passUrl) async {
+    try {
+      log('🍎 Opening Apple Wallet pass in Safari...');
+      log('🔗 URL: $passUrl');
+
+      final uri = Uri.parse(passUrl);
+
+      // Check if the URL can be launched
+      if (await canLaunchUrl(uri)) {
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication, // Opens in Safari
+        );
+
+        if (launched) {
+          log('✅ Successfully opened pass URL in Safari');
+          log('📱 Safari should now download the .pkpass file');
+          log('📱 When downloaded, tap the file to add to Apple Wallet');
+          return true;
+        } else {
+          log('❌ Failed to launch URL in Safari');
+          return false;
+        }
+      } else {
+        log('❌ Cannot launch URL: $passUrl');
+        return false;
+      }
+    } catch (e) {
+      log('❌ Error opening pass in Safari: $e');
+      return false;
+    }
+  }
+
+  /// Generate pass and open in Safari (convenience method)
+  Future<bool> generateAndOpenPass({
+    required String customerName,
+    required int points,
+  }) async {
+    try {
+      log('🎯 Generating Apple Wallet pass and opening in Safari...');
+
+      // Generate the pass URL
+      final passUrl = await generatePassUrl(
+        customerName: customerName,
+        points: points,
+      );
+
+      // Open in Safari
+      return await openPassInSafari(passUrl);
+    } catch (e) {
+      log('❌ Error generating and opening pass: $e');
+      return false;
+    }
+  }
+
   /// Test pass URL accessibility
   Future<bool> testPassUrl(String passUrl) async {
     try {
@@ -898,6 +959,72 @@ class AppleWalletService {
     } catch (e) {
       log('❌ Error testing pass URL: $e');
       return false;
+    }
+  }
+
+  /// Test pass file directly in simulator
+  Future<void> testPassInSimulator(String passPath) async {
+    try {
+      log('🧪 Testing pass file in simulator...');
+      log('📁 Pass file: $passPath');
+
+      final passFile = File(passPath);
+      if (await passFile.exists()) {
+        final fileSize = await passFile.length();
+        log('✅ Pass file exists ($fileSize bytes)');
+        log('📱 To test in simulator:');
+        log('   1. Copy this file to your Desktop');
+        log('   2. Drag and drop it onto the iOS Simulator');
+        log('   3. Check if Apple Wallet opens and accepts the pass');
+        log('📁 File path: $passPath');
+
+        // Also test the file structure
+        await _validatePassFileStructure(passPath);
+      } else {
+        log('❌ Pass file not found: $passPath');
+      }
+    } catch (e) {
+      log('❌ Error testing pass in simulator: $e');
+    }
+  }
+
+  /// Validate pass file structure for debugging
+  Future<void> _validatePassFileStructure(String passPath) async {
+    try {
+      log('🔍 Validating pass file structure...');
+
+      // Read the PKPass file as ZIP
+      final passFile = File(passPath);
+      final passBytes = await passFile.readAsBytes();
+
+      // Check ZIP signature
+      if (passBytes.length >= 4 && passBytes[0] == 0x50 && passBytes[1] == 0x4B) {
+        log('✅ Valid ZIP signature found');
+      } else {
+        log('❌ Invalid ZIP signature');
+        return;
+      }
+
+      // Try to extract and validate contents
+      try {
+        final archive = ZipDecoder().decodeBytes(passBytes);
+        log('✅ PKPass file can be decoded as ZIP');
+
+        final requiredFiles = ['pass.json', 'manifest.json', 'signature'];
+        for (final filename in requiredFiles) {
+          final file = archive.files.firstWhere(
+            (f) => f.name == filename,
+            orElse: () => throw Exception('File not found: $filename'),
+          );
+          log('✅ $filename found (${file.size} bytes)');
+        }
+
+        log('✅ Pass file structure is valid');
+      } catch (e) {
+        log('❌ Error validating pass file structure: $e');
+      }
+    } catch (e) {
+      log('❌ Error validating pass file: $e');
     }
   }
 
