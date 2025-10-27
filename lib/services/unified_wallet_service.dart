@@ -48,12 +48,8 @@ class UnifiedWalletService {
         // Try Apple Wallet first
         final appleResult = await _generateAppleWalletPass(customerName: customerName, points: points);
 
-        // If Apple Wallet fails, fall back to Google Wallet
-        if (!appleResult.success) {
-          log('⚠️ Apple Wallet failed, falling back to Google Wallet...');
-          return await _generateGoogleWalletPass(customerName: customerName, points: points);
-        }
-
+        // Always return Apple Wallet result for iOS, even if it fails
+        // The UI will handle showing the error and QR code
         return appleResult;
       } else {
         return await _generateGoogleWalletPass(customerName: customerName, points: points);
@@ -92,11 +88,15 @@ class UnifiedWalletService {
       );
     } catch (e) {
       log('❌ Error generating Apple Wallet pass: $e');
+      
+      // Even when it fails, provide a fallback URL for QR display
+      final fallbackUrl = 'https://ah0es.github.io/loyalpointapp/passes/error-${DateTime.now().millisecondsSinceEpoch}.pkpass';
+      
       return WalletPassResult(
         type: WalletType.apple,
-        data: null,
+        data: fallbackUrl,
         success: false,
-        message: 'Failed to generate Apple Wallet pass: $e',
+        message: 'Apple Wallet failed: $e',
       );
     }
   }

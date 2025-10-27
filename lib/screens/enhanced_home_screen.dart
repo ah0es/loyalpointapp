@@ -655,6 +655,7 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
         });
       } else {
         setState(() {
+          // Show error message but still allow QR code to be displayed
           _errorMessage = _walletResult!.message;
           _isGenerating = false;
         });
