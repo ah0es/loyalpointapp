@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 import '../models/loyalty_card.dart';
 import '../config/apple_wallet_config.dart';
-import 'public_pass_server.dart';
+import 'github_apple_wallet_service.dart';
 
 /// Apple Wallet Service
 ///
@@ -381,22 +381,46 @@ class AppleWalletService {
       // For testing: Use local file URL
       // In production: Upload to web server and return public URL
       final file = File(passPath);
-      final fileUri = file.uri.toString();
 
-      // Apple Wallet approach: Use data URL with the pass file
+      // Apple Wallet approach: Upload to Firebase and get public URL
       final passId = loyaltyCard.id;
       final passBytes = await file.readAsBytes();
 
-      // Create data URL that contains the entire pass file
-      final base64Pass = base64Encode(passBytes);
-      final appleWalletDataUrl = 'data:application/vnd.apple.pkpass;base64,$base64Pass';
+      try {
+        // Check if GitHub is configured
+        if (GitHubAppleWalletService.isConfigured) {
+          // Upload to GitHub and get public URL
+          final appleWalletUrl = await GitHubAppleWalletService.generateAppleWalletUrl(passPath, passId);
 
-      log('🍎 Apple Wallet Data URL created');
-      log('📊 Pass size: ${passBytes.length} bytes');
-      log('🔗 Data URL length: ${appleWalletDataUrl.length} characters');
-      log('📱 iPhone can process this data URL directly!');
+          log('🍎 Apple Wallet URL created via GitHub');
+          log('📊 Pass size: ${passBytes.length} bytes');
+          log('🔗 Apple Wallet URL: $appleWalletUrl');
+          log('📱 iPhone will open this URL in Safari');
+          log('✅ Ready for QR code scanning!');
 
-      return appleWalletDataUrl;
+          return appleWalletUrl;
+        } else {
+          log('⚠️ GitHub not configured, using placeholder URL');
+          log('📋 Setup instructions:');
+          log(GitHubAppleWalletService.setupInstructions);
+
+          // Fallback: Use placeholder URL for testing
+          final placeholderUrl = 'https://your-username.github.io/loyalty-passes/passes/$passId.pkpass';
+          log('🔗 Using placeholder URL: $placeholderUrl');
+          log('⚠️ Note: Configure GitHub service for real functionality');
+
+          return placeholderUrl;
+        }
+      } catch (githubError) {
+        log('⚠️ GitHub upload failed, using placeholder URL: $githubError');
+
+        // Fallback: Use placeholder URL for testing
+        final placeholderUrl = 'https://your-username.github.io/loyalty-passes/passes/$passId.pkpass';
+        log('🔗 Using placeholder URL: $placeholderUrl');
+        log('⚠️ Note: Configure GitHub service for real functionality');
+
+        return placeholderUrl;
+      }
     } catch (e) {
       log('❌ Error generating Apple Wallet URL: $e');
       rethrow;

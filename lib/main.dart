@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens/enhanced_home_screen.dart';
 
 /// Loyalty Point App
 ///
-/// A Flutter application for generating Google Wallet loyalty cards
+/// A Flutter application for generating Google Wallet and Apple Wallet loyalty cards
 /// with QR code scanning functionality. Users can create loyalty cards
-/// that can be added to Google Wallet via QR code scanning.
-void main() {
+/// that can be added to Google Wallet and Apple Wallet via QR code scanning.
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const LoyaltyPointApp());
 }
 
