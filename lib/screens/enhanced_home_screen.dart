@@ -409,34 +409,21 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
                   style: TextStyle(fontSize: 16, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
-              ] else if (_walletResult!.type == WalletType.apple) ...[
-                // Apple Wallet Pass
+              ] else if (_walletResult!.type == WalletType.apple && _walletResult!.data != null) ...[
+                // Apple Wallet QR Code
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.black,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+                    border: Border.all(color: Colors.grey[300]!),
+                    boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))],
                   ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.phone_iphone, color: Colors.white, size: 48),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Apple Wallet Pass',
-                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Pass file generated successfully',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
-                      ),
-                    ],
-                  ),
+                  child: QrImageView(data: _walletResult!.data!, version: QrVersions.auto, size: 250.0, backgroundColor: Colors.white),
                 ),
                 const SizedBox(height: 20),
                 const Text(
-                  'The pass file has been generated and is ready to be added to Apple Wallet',
+                  'Scan this QR code with your iPhone camera to add the loyalty card to Apple Wallet',
                   style: TextStyle(fontSize: 16, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
