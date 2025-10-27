@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
+import 'package:http/http.dart' as http;
 import '../models/loyalty_card.dart';
 import '../config/apple_wallet_config.dart';
 import 'supabase_apple_wallet_service.dart';
@@ -693,6 +694,11 @@ class AppleWalletService {
           // Test the URL
           await testPassUrl(appleWalletUrl);
 
+          // Also try creating a direct download link
+          final directDownloadUrl = _createDirectDownloadUrl(appleWalletUrl);
+          log('🔗 Direct download URL: $directDownloadUrl');
+          log('📱 Try this URL if the main one doesn\'t work: $directDownloadUrl');
+
           return appleWalletUrl;
         } else {
           log('❌ Supabase not configured - cannot generate Apple Wallet URL');
@@ -738,16 +744,51 @@ class AppleWalletService {
       log('🧪 Testing pass URL accessibility...');
       log('🔗 URL: $passUrl');
 
-      // This would test if the URL is accessible
-      // In a real implementation, you'd make an HTTP request
-      log('📱 Test this URL in Safari: $passUrl');
-      log('📱 Expected behavior: Safari should download the .pkpass file');
-      log('📱 If it fails: Check Supabase configuration and file serving');
+      // Test the URL with HTTP request
+      final response = await http.get(Uri.parse(passUrl));
 
-      return true;
+      log('📊 HTTP Status: ${response.statusCode}');
+      log('📊 Content-Type: ${response.headers['content-type']}');
+      log('📊 Content-Length: ${response.headers['content-length']}');
+      log('📊 Response Size: ${response.bodyBytes.length} bytes');
+
+      if (response.statusCode == 200) {
+        log('✅ URL is accessible');
+        log('📱 Test this URL in Safari: $passUrl');
+        log('📱 Expected behavior: Safari should download the .pkpass file');
+
+        // Check if it's actually a PKPass file
+        if (response.bodyBytes.isNotEmpty) {
+          log('✅ File has content');
+          // Check for ZIP signature (PKPass files are ZIP archives)
+          if (response.bodyBytes.length >= 4 && response.bodyBytes[0] == 0x50 && response.bodyBytes[1] == 0x4B) {
+            log('✅ File appears to be a valid ZIP/PKPass file');
+          } else {
+            log('⚠️ File may not be a valid PKPass file (missing ZIP signature)');
+          }
+        } else {
+          log('❌ File is empty');
+        }
+      } else {
+        log('❌ URL is not accessible (Status: ${response.statusCode})');
+      }
+
+      return response.statusCode == 200;
     } catch (e) {
       log('❌ Error testing pass URL: $e');
       return false;
     }
+  }
+
+  /// Create a direct download URL that might work better in browsers
+  String _createDirectDownloadUrl(String originalUrl) {
+    // Add download parameter to force download
+    final uri = Uri.parse(originalUrl);
+    final newUri = uri.replace(queryParameters: {
+      ...uri.queryParameters,
+      'download': 'true',
+      'filename': 'loyalty-card.pkpass',
+    });
+    return newUri.toString();
   }
 }

@@ -38,6 +38,7 @@ class SupabaseAppleWalletService {
           'Authorization': 'Bearer $_supabaseAnonKey',
           'Content-Type': 'application/vnd.apple.pkpass',
           'Cache-Control': 'no-cache',
+          'Content-Disposition': 'attachment; filename="$passId.pkpass"',
         },
         body: fileBytes,
       );
