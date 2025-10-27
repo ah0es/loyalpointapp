@@ -36,7 +36,7 @@ class SupabaseAppleWalletService {
         Uri.parse(uploadUrl),
         headers: {
           'Authorization': 'Bearer $_supabaseAnonKey',
-          'Content-Type': 'application/octet-stream',
+          'Content-Type': 'application/vnd.apple.pkpass',
         },
         body: fileBytes,
       );
