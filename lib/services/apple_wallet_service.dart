@@ -34,14 +34,26 @@ class AppleWalletService {
 
       // Check configuration
       if (!AppleWalletConfig.isConfigured) {
-        log('⚠️ Apple Wallet not fully configured: ${AppleWalletConfig.configurationStatus}');
-        log('⚠️ Generating placeholder Apple Wallet URL for testing...');
+        log('❌ Apple Wallet not configured: ${AppleWalletConfig.configurationStatus}');
+        throw Exception('Apple Wallet not configured. Please update AppleWalletConfig with your Apple Developer credentials.');
       }
 
       // Create loyalty card data
       final loyaltyCard = await createLoyaltyCard(customerName: customerName, points: points);
 
+      // Log loyalty card data before generating pass
+      log('📋 Loyalty Card Data:');
+      log('   ID: ${loyaltyCard.id}');
+      log('   Class ID: ${loyaltyCard.classId}');
+      log('   Customer: ${loyaltyCard.customerName}');
+      log('   Points: ${loyaltyCard.points}');
+      log('   Level: ${loyaltyCard.level}');
+      log('   Barcode Value: ${loyaltyCard.barcodeValue}');
+      log('   Background Color: ${loyaltyCard.backgroundColor}');
+      log('   Logo URL: ${loyaltyCard.logoUrl}');
+
       // Generate pass data
+      log('🔧 Generating pass data from loyalty card...');
       final passData = _generatePassData(loyaltyCard);
 
       // Create PKPass file
@@ -74,9 +86,8 @@ class AppleWalletService {
 
       // Check configuration
       if (!AppleWalletConfig.isConfigured) {
-        log('⚠️ Apple Wallet not fully configured: ${AppleWalletConfig.configurationStatus}');
-        log('⚠️ Generating placeholder Apple Wallet pass for testing...');
-        // Continue with placeholder pass generation
+        log('❌ Apple Wallet not configured: ${AppleWalletConfig.configurationStatus}');
+        throw Exception('Apple Wallet not configured. Please update AppleWalletConfig with your Apple Developer credentials.');
       }
 
       // Create loyalty card data
@@ -138,7 +149,15 @@ class AppleWalletService {
 
   /// Generate pass data in Apple Wallet format
   Map<String, dynamic> _generatePassData(LoyaltyCard card) {
-    return {
+    log('🔧 Creating Apple Wallet pass data structure...');
+    log('   Pass Type ID: ${AppleWalletConfig.passTypeId}');
+    log('   Team ID: ${AppleWalletConfig.teamId}');
+    log('   Organization: ${AppleWalletConfig.organizationName}');
+    log('   Description: ${AppleWalletConfig.passDescription}');
+    log('   Web Service URL: ${AppleWalletConfig.webServiceUrl}');
+    log('   Auth Token: ${AppleWalletConfig.authenticationToken}');
+    
+    final passData = {
       'formatVersion': 1,
       'passTypeIdentifier': AppleWalletConfig.passTypeId,
       'serialNumber': card.id,
@@ -201,9 +220,16 @@ class AppleWalletService {
       'relevantDate': DateTime.now().toIso8601String(),
       'expirationDate': DateTime.now().add(Duration(days: AppleWalletConfig.passValidityDays)).toIso8601String(),
       'voided': false,
-      'webServiceURL': 'https://your-server.com/passes', // Optional: for pass updates
-      'authenticationToken': 'your-auth-token', // Optional: for web service auth
+      'webServiceURL': AppleWalletConfig.webServiceUrl, // Web service URL for pass updates
+      'authenticationToken': AppleWalletConfig.authenticationToken, // Authentication token for web service
     };
+    
+    log('✅ Pass data structure created successfully');
+    log('📊 Pass data keys: ${passData.keys.toList()}');
+    log('📊 Store card fields: ${(passData['storeCard'] as Map<String, dynamic>).keys.toList()}');
+    log('📊 Barcodes: ${(passData['barcodes'] as List).length} barcode(s)');
+    
+    return passData;
   }
 
   /// Create PKPass file
@@ -213,8 +239,8 @@ class AppleWalletService {
 
       // Check if Apple Wallet is configured
       if (!AppleWalletConfig.isConfigured) {
-        log('⚠️ Apple Wallet not configured. Creating placeholder pass.');
-        return await _createPlaceholderPass(card);
+        log('❌ Apple Wallet not configured. Cannot create pass.');
+        throw Exception('Apple Wallet not configured. Please update AppleWalletConfig with your Apple Developer credentials.');
       }
 
       // Get temporary directory
@@ -288,22 +314,6 @@ class AppleWalletService {
       log('❌ Error creating PKPass file: $e');
       rethrow;
     }
-  }
-
-  /// Create placeholder pass when Apple Wallet is not configured
-  Future<String> _createPlaceholderPass(LoyaltyCard card) async {
-    final tempDir = await getTemporaryDirectory();
-    final passFile = File('${tempDir.path}/loyalty_${card.id}_placeholder.json');
-    await passFile.writeAsString(jsonEncode({
-      'message': 'Apple Wallet not configured',
-      'instructions': 'Please configure AppleWalletConfig with your Apple Developer credentials',
-      'cardData': {
-        'customerName': card.customerName,
-        'points': card.points,
-        'level': card.level,
-      }
-    }));
-    return passFile.path;
   }
 
   /// Create image assets for the pass
@@ -405,43 +415,16 @@ class AppleWalletService {
       // Validate certificate configuration first
       final isValidConfig = await validateCertificateConfig();
       if (!isValidConfig) {
-        log('⚠️ Certificate configuration invalid - creating unsigned pass');
-        log('⚠️ Apple Wallet will likely reject this pass');
-        await _createUnsignedPass(passDir);
-        return;
+        log('❌ Certificate configuration invalid - cannot create pass');
+        throw Exception('Certificate configuration invalid. Please check your certificate path and password.');
       }
 
-      // Try to load and sign with certificate
-      try {
-        await _signWithCertificate(passDir);
-        log('✅ Pass signed successfully with certificate');
-      } catch (certError) {
-        log('❌ Certificate signing failed: $certError');
-        log('⚠️ Falling back to unsigned pass');
-        await _createUnsignedPass(passDir);
-      }
+      // Sign with certificate
+      await _signWithCertificate(passDir);
+      log('✅ Pass signed successfully with certificate');
     } catch (e) {
       log('❌ Error signing pass: $e');
-      // Don't rethrow - unsigned passes can still work for testing
-    }
-  }
-
-  /// Create an unsigned pass (for testing)
-  Future<void> _createUnsignedPass(String passDir) async {
-    try {
-      // Create a minimal signature file to prevent Apple Wallet from crashing
-      final signatureFile = File('$passDir/signature');
-
-      // Create a minimal PKCS#7 structure (this won't validate but prevents crashes)
-      final minimalSignature = _createMinimalSignature();
-      await signatureFile.writeAsBytes(minimalSignature);
-
-      log('⚠️ Created unsigned pass with minimal signature');
-      log('📋 This pass will likely be rejected by Apple Wallet');
-      log('📋 To fix: Implement proper certificate-based signing');
-      log('📋 For testing: Try opening the URL in Safari first');
-    } catch (e) {
-      log('❌ Error creating unsigned pass: $e');
+      rethrow;
     }
   }
 
@@ -554,20 +537,6 @@ class AppleWalletService {
       log('❌ Error creating PKCS#7 signature: $e');
       rethrow;
     }
-  }
-
-  /// Create minimal signature to prevent crashes
-  Uint8List _createMinimalSignature() {
-    // Minimal PKCS#7 structure that won't crash Apple Wallet
-    return Uint8List.fromList([
-      0x30, 0x82, 0x00, 0x20, // SEQUENCE
-      0x30, 0x82, 0x00, 0x1C, // SEQUENCE
-      0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x02, // OID
-      0xA0, 0x82, 0x00, 0x0F, // IMPLICIT
-      0x30, 0x82, 0x00, 0x0B, // SEQUENCE
-      0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x01, // OID
-      0x04, 0x00, // OCTET STRING (empty)
-    ]);
   }
 
   /// Validate pass structure before creating PKPass file
@@ -841,6 +810,12 @@ class AppleWalletService {
     try {
       log('🍎 Opening Apple Wallet pass in Safari...');
       log('🔗 URL: $passUrl');
+      log('📱 DEBUGGING TIPS:');
+      log('📱 1. Open Safari in Simulator');
+      log('📱 2. Go to Safari → Develop → Simulator → Show Web Inspector');
+      log('📱 3. Or press Cmd+Option+I to open Web Inspector');
+      log('📱 4. Check Console tab for errors');
+      log('📱 5. Check Network tab to see the request/response');
 
       // First, test the URL before opening
       log('🧪 Testing URL before opening in Safari...');
@@ -848,6 +823,8 @@ class AppleWalletService {
       if (!urlTestResult) {
         log('❌ URL test failed - Safari will likely show download error');
         log('📋 This explains why Safari cannot download the file');
+        log('📋 Check the detailed logs above to see what failed');
+        await debugSafariDownload(passUrl);
         return false;
       }
 
@@ -875,11 +852,17 @@ class AppleWalletService {
           log('✅ Successfully opened pass URL in Safari');
           log('📱 Safari should now download the .pkpass file');
           log('📱 When downloaded, tap the file to add to Apple Wallet');
-          log('⚠️ If Safari shows "cannot download" error, check the URL test results above');
+          log('⚠️ If Safari shows "cannot download" error:');
+          log('⚠️ 1. Check Safari Web Inspector (Cmd+Option+I)');
+          log('⚠️ 2. Look at Console tab for JavaScript errors');
+          log('⚠️ 3. Look at Network tab for failed requests');
+          log('⚠️ 4. Check if the URL is accessible');
+          log('⚠️ 5. Verify the file is a valid .pkpass file');
           return true;
         } else {
           log('❌ Failed to launch URL in Safari');
           log('📋 This means Safari opened but couldn\'t handle the URL');
+          log('📋 Check if the URL format is correct');
           return false;
         }
       } else {
@@ -1069,5 +1052,43 @@ class AppleWalletService {
       'filename': 'loyalty-card.pkpass',
     });
     return newUri.toString();
+  }
+
+  /// Debug Safari download issues
+  Future<void> debugSafariDownload(String passUrl) async {
+    try {
+      log('🔍 DEBUGGING SAFARI DOWNLOAD ISSUES');
+      log('🔗 URL: $passUrl');
+      log('');
+      log('📱 STEP 1: Open Safari Web Inspector');
+      log('   1. Open Safari in iOS Simulator');
+      log('   2. Go to Safari menu → Develop → Simulator → Show Web Inspector');
+      log('   3. Or press Cmd+Option+I (Mac) or Ctrl+Alt+I (Windows)');
+      log('');
+      log('📱 STEP 2: Check Console Tab');
+      log('   - Look for JavaScript errors');
+      log('   - Look for network errors');
+      log('   - Look for download-related messages');
+      log('');
+      log('📱 STEP 3: Check Network Tab');
+      log('   - Look for the request to your pass URL');
+      log('   - Check the response status (should be 200)');
+      log('   - Check Content-Type (should be application/vnd.apple.pkpass)');
+      log('   - Check if the response body is a valid ZIP file');
+      log('');
+      log('📱 STEP 4: Test URL Manually');
+      log('   - Copy this URL: $passUrl');
+      log('   - Paste it in Safari address bar');
+      log('   - Press Enter and see what happens');
+      log('   - Check if it downloads or shows an error');
+      log('');
+      log('📱 STEP 5: Check Safari Settings');
+      log('   - Go to Settings → Safari');
+      log('   - Make sure "Block Pop-ups" is OFF');
+      log('   - Make sure "Prevent Cross-Site Tracking" is OFF');
+      log('   - Try in Private Browsing mode');
+    } catch (e) {
+      log('❌ Error in debugSafariDownload: $e');
+    }
   }
 }

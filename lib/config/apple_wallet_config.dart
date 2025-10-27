@@ -55,9 +55,13 @@ class AppleWalletConfig {
   static const String barcodeEncoding = 'iso-8859-1';
 
   /// Contact information
-  static const String supportEmail = 'support@yourcompany.com';
+  static const String supportEmail = 'support@loyaltyapp.com';
   static const String supportPhone = '+1-800-123-4567';
-  static const String website = 'https://yourcompany.com';
+  static const String website = 'https://loyaltyapp.com';
+
+  /// Web service configuration
+  static const String webServiceUrl = 'https://loyaltyapp.com/api/passes';
+  static const String authenticationToken = 'loyalty-app-auth-token-2024';
 
   /// Terms and conditions
   static const String termsAndConditions = 'This loyalty card is valid for earning and redeeming points. '
@@ -66,13 +70,28 @@ class AppleWalletConfig {
 
   /// Validate configuration
   static bool get isConfigured {
-    return teamId != 'YOUR_TEAM_ID' && passTypeId != 'pass.com.yourcompany.loyalty' && organizationName != 'Your Company Name';
+    return teamId.isNotEmpty &&
+        passTypeId.isNotEmpty &&
+        organizationName.isNotEmpty &&
+        passTypeId.startsWith('pass.') &&
+        teamId.length == 10 &&
+        certificatePath.isNotEmpty &&
+        certificatePassword.isNotEmpty;
   }
 
   /// Get configuration status message
   static String get configurationStatus {
     if (!isConfigured) {
-      return 'Apple Wallet not configured. Please update AppleWalletConfig with your Apple Developer credentials.';
+      final issues = <String>[];
+      if (teamId.isEmpty) issues.add('Team ID is empty');
+      if (passTypeId.isEmpty) issues.add('Pass Type ID is empty');
+      if (!passTypeId.startsWith('pass.')) issues.add('Pass Type ID must start with "pass."');
+      if (teamId.length != 10) issues.add('Team ID must be exactly 10 characters');
+      if (organizationName.isEmpty) issues.add('Organization name is empty');
+      if (certificatePath.isEmpty) issues.add('Certificate path is empty');
+      if (certificatePassword.isEmpty) issues.add('Certificate password is empty');
+
+      return 'Apple Wallet configuration issues: ${issues.join(', ')}';
     }
     return 'Apple Wallet configured successfully.';
   }
