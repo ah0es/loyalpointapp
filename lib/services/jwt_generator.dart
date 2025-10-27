@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:typed_data';
 import 'package:asn1lib/asn1lib.dart';
 import 'package:pointycastle/export.dart';
@@ -19,7 +20,7 @@ class JWTGenerator {
   /// The JWT contains the loyalty card data and is signed with the service account private key
   Future<String> generateSaveToWalletJWT(Map<String, dynamic> loyaltyCardObject) async {
     try {
-      print('🔐 Generating JWT for Google Wallet...');
+      log('🔐 Generating JWT for Google Wallet...');
 
       // Create JWT header
       final header = {'alg': 'RS256', 'typ': 'JWT'};
@@ -36,9 +37,9 @@ class JWTGenerator {
         },
       };
 
-      print('📝 JWT Header: ${jsonEncode(header)}');
-      print('📝 JWT Payload (first 50 chars): ${jsonEncode(payload).substring(0, 50)}...');
-      print('📝 Full JWT Payload: ${jsonEncode(payload)}');
+      log('📝 JWT Header: ${jsonEncode(header)}');
+      log('📝 JWT Payload (first 50 chars): ${jsonEncode(payload).substring(0, 50)}...');
+      log('📝 Full JWT Payload: ${jsonEncode(payload)}');
 
       // Encode header and payload
       final encodedHeader = _base64UrlEncode(jsonEncode(header));
@@ -53,10 +54,10 @@ class JWTGenerator {
       // Create the complete JWT
       final jwt = '$message.$signature';
 
-      print('✅ JWT generated successfully (length: ${jwt.length})');
+      log('✅ JWT generated successfully (length: ${jwt.length})');
       return jwt;
     } catch (e) {
-      print('❌ Error generating JWT: $e');
+      log('❌ Error generating JWT: $e');
       rethrow;
     }
   }
@@ -67,7 +68,7 @@ class JWTGenerator {
   /// Used for updating loyalty cards via Google Wallet API
   Future<String> generateOAuthJWT(String scope) async {
     try {
-      print('🔐 Generating OAuth JWT...');
+      log('🔐 Generating OAuth JWT...');
 
       final header = {'alg': 'RS256', 'typ': 'JWT'};
 
@@ -80,8 +81,8 @@ class JWTGenerator {
         'exp': currentTime + 3600, // 1 hour expiration
       };
 
-      print('📝 OAuth JWT Header: ${jsonEncode(header)}');
-      print('📝 OAuth JWT Payload: ${jsonEncode(payload)}');
+      log('📝 OAuth JWT Header: ${jsonEncode(header)}');
+      log('📝 OAuth JWT Payload: ${jsonEncode(payload)}');
 
       final encodedHeader = _base64UrlEncode(jsonEncode(header));
       final encodedPayload = _base64UrlEncode(jsonEncode(payload));
@@ -90,10 +91,10 @@ class JWTGenerator {
       final signature = await _signWithRSA(message);
       final jwt = '$message.$signature';
 
-      print('✅ OAuth JWT generated successfully');
+      log('✅ OAuth JWT generated successfully');
       return jwt;
     } catch (e) {
-      print('❌ Error generating OAuth JWT: $e');
+      log('❌ Error generating OAuth JWT: $e');
       rethrow;
     }
   }
@@ -101,7 +102,7 @@ class JWTGenerator {
   /// Sign message with RSA-SHA256 using the service account private key
   Future<String> _signWithRSA(String message) async {
     try {
-      print('🔑 Parsing RSA private key...');
+      log('🔑 Parsing RSA private key...');
 
       // Parse the private key from PEM format
       final privateKey = _parsePrivateKey();
@@ -122,10 +123,10 @@ class JWTGenerator {
       // Encode signature as Base64URL
       final encodedSignature = _base64UrlEncode(signatureBytes);
 
-      print('✅ RSA signature generated');
+      log('✅ RSA signature generated');
       return encodedSignature;
     } catch (e) {
-      print('❌ Error signing with RSA: $e');
+      log('❌ Error signing with RSA: $e');
       rethrow;
     }
   }
@@ -149,7 +150,7 @@ class JWTGenerator {
       final asn1Parser = ASN1Parser(keyBytes);
       final topLevelSeq = asn1Parser.nextObject() as ASN1Sequence;
 
-      print('🔍 Top level sequence has ${topLevelSeq.elements.length} elements');
+      log('🔍 Top level sequence has ${topLevelSeq.elements.length} elements');
 
       // The PKCS#8 structure is:
       // SEQUENCE {
@@ -162,13 +163,13 @@ class JWTGenerator {
       final privateKeyOctetString = topLevelSeq.elements[2] as ASN1OctetString;
       final privateKeyBytes = privateKeyOctetString.octets;
 
-      print('🔍 Private key octet string length: ${privateKeyBytes.length} bytes');
+      log('🔍 Private key octet string length: ${privateKeyBytes.length} bytes');
 
       // Parse the private key octet string as ASN.1
       final privateKeyParser = ASN1Parser(privateKeyBytes);
       final rsaPrivateKeySeq = privateKeyParser.nextObject() as ASN1Sequence;
 
-      print('🔍 RSA private key sequence has ${rsaPrivateKeySeq.elements.length} elements');
+      log('🔍 RSA private key sequence has ${rsaPrivateKeySeq.elements.length} elements');
 
       // The RSA private key structure is:
       // SEQUENCE {
@@ -189,19 +190,19 @@ class JWTGenerator {
       final p = (rsaPrivateKeySeq.elements[4] as ASN1Integer).valueAsBigInteger;
       final q = (rsaPrivateKeySeq.elements[5] as ASN1Integer).valueAsBigInteger;
 
-      print('🔍 Extracted RSA components:');
-      print('🔍   Modulus: ${modulus.bitLength} bits');
-      print('🔍   Private exponent: ${privateExponent.bitLength} bits');
-      print('🔍   P: ${p.bitLength} bits');
-      print('🔍   Q: ${q.bitLength} bits');
+      log('🔍 Extracted RSA components:');
+      log('🔍   Modulus: ${modulus.bitLength} bits');
+      log('🔍   Private exponent: ${privateExponent.bitLength} bits');
+      log('🔍   P: ${p.bitLength} bits');
+      log('🔍   Q: ${q.bitLength} bits');
 
       // Create RSA private key
       final rsaPrivateKey = RSAPrivateKey(modulus, privateExponent, p, q);
 
-      print('✅ RSA private key parsed successfully');
+      log('✅ RSA private key parsed successfully');
       return rsaPrivateKey;
     } catch (e) {
-      print('❌ Error parsing private key: $e');
+      log('❌ Error parsing private key: $e');
       rethrow;
     }
   }

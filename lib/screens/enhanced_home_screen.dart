@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../services/google_wallet_service.dart';
+import 'dart:io';
+import 'dart:developer';
+import 'package:flutter/foundation.dart';
+import '../services/unified_wallet_service.dart';
 import 'debug_screen.dart';
 
 /// Enhanced Home Screen with Modern Design
@@ -19,16 +22,27 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
   final _customerNameController = TextEditingController();
   final _pointsController = TextEditingController();
 
-  final GoogleWalletService _walletService = GoogleWalletService();
+  final UnifiedWalletService _walletService = UnifiedWalletService();
 
-  String? _saveUrl;
+  WalletPassResult? _walletResult;
   bool _isGenerating = false;
   String? _errorMessage;
   String? _successMessage;
   Map<String, dynamic>? _cardPreview;
+  WalletAvailability? _walletAvailability;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+
+  /// Safely check if running on iOS
+  /// Returns false for web and other unsupported platforms
+  bool get _isIOS {
+    try {
+      return !kIsWeb && Platform.isIOS;
+    } catch (e) {
+      return false;
+    }
+  }
 
   @override
   void initState() {
@@ -36,6 +50,7 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
     _animationController = AnimationController(duration: const Duration(milliseconds: 1000), vsync: this);
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut));
     _animationController.forward();
+    _checkWalletAvailability();
   }
 
   @override
@@ -78,7 +93,7 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
               _buildForm(),
               const SizedBox(height: 24),
               if (_cardPreview != null) _buildCardPreview(),
-              if (_saveUrl != null) _buildQRCode(),
+              if (_walletResult != null) _buildWalletResult(),
               if (_errorMessage != null) _buildErrorMessage(),
               if (_successMessage != null) _buildSuccessMessage(),
               const SizedBox(height: 24),
@@ -119,18 +134,20 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Create stunning loyalty cards that users can add directly to their Google Wallet',
-              style: TextStyle(fontSize: 18, color: Colors.white70, height: 1.4),
+            Text(
+              _isIOS
+                  ? 'Create stunning loyalty cards that users can add directly to their Apple Wallet or Google Wallet'
+                  : 'Create stunning loyalty cards that users can add directly to their Google Wallet',
+              style: const TextStyle(fontSize: 18, color: Colors.white70, height: 1.4),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(25)),
-              child: const Text(
-                '✨ Powered by Google Wallet',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
+              child: Text(
+                _isIOS ? '✨ Powered by Apple Wallet & Google Wallet' : '✨ Powered by Google Wallet',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
               ),
             ),
           ],
@@ -341,8 +358,8 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
     );
   }
 
-  Widget _buildQRCode() {
-    if (_saveUrl == null) return const SizedBox.shrink();
+  Widget _buildWalletResult() {
+    if (_walletResult == null) return const SizedBox.shrink();
 
     return Card(
       elevation: 8,
@@ -360,40 +377,78 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: const Color(0xFF4285F4).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.qr_code, color: Color(0xFF4285F4), size: 24),
+                    decoration: BoxDecoration(
+                        color: _walletResult!.type == WalletType.apple ? Colors.black.withOpacity(0.1) : const Color(0xFF4285F4).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Icon(_walletResult!.type == WalletType.apple ? Icons.phone_iphone : Icons.qr_code,
+                        color: _walletResult!.type == WalletType.apple ? Colors.black : const Color(0xFF4285F4), size: 24),
                   ),
                   const SizedBox(width: 16),
-                  const Text('QR Code', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(_walletResult!.type == WalletType.apple ? 'Apple Wallet Pass' : 'Google Wallet QR Code',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[300]!),
-                  boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))],
+              if (_walletResult!.type == WalletType.google && _walletResult!.data != null) ...[
+                // Google Wallet QR Code
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey[300]!),
+                    boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))],
+                  ),
+                  child: QrImageView(data: _walletResult!.data!, version: QrVersions.auto, size: 250.0, backgroundColor: Colors.white),
                 ),
-                child: QrImageView(data: _saveUrl!, version: QrVersions.auto, size: 250.0, backgroundColor: Colors.white),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Scan this QR code with your phone camera to add the loyalty card to Google Wallet',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Scan this QR code with your phone camera to add the loyalty card to Google Wallet',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ] else if (_walletResult!.type == WalletType.apple) ...[
+                // Apple Wallet Pass
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.phone_iphone, color: Colors.white, size: 48),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Apple Wallet Pass',
+                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Pass file generated successfully',
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'The pass file has been generated and is ready to be added to Apple Wallet',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
               const SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => _walletService.launchSaveUrl(_saveUrl!),
-                      icon: const Icon(Icons.open_in_browser),
-                      label: const Text('Add to Wallet'),
+                      onPressed: () => _addToWallet(),
+                      icon: Icon(_walletResult!.type == WalletType.apple ? Icons.phone_iphone : Icons.open_in_browser),
+                      label: Text(_walletResult!.type == WalletType.apple ? 'Add to Apple Wallet' : 'Add to Google Wallet'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF34A853),
+                        backgroundColor: _walletResult!.type == WalletType.apple ? Colors.black : const Color(0xFF34A853),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -401,24 +456,26 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: _saveUrl!));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Save URL copied to clipboard!')));
-                      },
-                      icon: const Icon(Icons.copy),
-                      label: const Text('Copy URL'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4285F4),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 4,
+                  if (_walletResult!.type == WalletType.google && _walletResult!.data != null) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: _walletResult!.data!));
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Save URL copied to clipboard!')));
+                        },
+                        icon: const Icon(Icons.copy),
+                        label: const Text('Copy URL'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4285F4),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 4,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],
@@ -450,11 +507,21 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
                 description: 'Generate QR codes that users can scan to add cards to Google Wallet',
               ),
               _buildFeatureItem(
+                icon: Icons.phone_iphone,
+                title: 'Apple Wallet Support',
+                description: 'Create PKPass files for direct Apple Wallet integration on iOS devices',
+              ),
+              _buildFeatureItem(
                 icon: Icons.card_membership,
                 title: 'Loyalty Cards',
                 description: 'Create beautiful loyalty cards with points and levels',
               ),
-              _buildFeatureItem(icon: Icons.security, title: 'Secure', description: 'Powered by Google Wallet with enterprise-grade security'),
+              _buildFeatureItem(
+                  icon: Icons.security,
+                  title: 'Secure',
+                  description: _isIOS
+                      ? 'Powered by Apple Wallet and Google Wallet with enterprise-grade security'
+                      : 'Powered by Google Wallet with enterprise-grade security'),
             ],
           ),
         ),
@@ -567,7 +634,7 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
       _isGenerating = true;
       _errorMessage = null;
       _successMessage = null;
-      _saveUrl = null;
+      _walletResult = null;
       _cardPreview = null;
     });
 
@@ -588,19 +655,27 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
       // Get card preview
       _cardPreview = _walletService.getCardPreview(customerName: customerName, points: points);
 
-      // Generate Save URL
-      _saveUrl = await _walletService.generateSaveUrl(customerName: customerName, points: points);
+      // Generate wallet pass (automatically detects platform)
+      _walletResult = await _walletService.generateWalletPass(customerName: customerName, points: points);
 
-      setState(() {
-        _successMessage = 'QR code generated successfully!';
-        _isGenerating = false;
-      });
+      if (_walletResult!.success) {
+        setState(() {
+          _successMessage =
+              _walletResult!.type == WalletType.apple ? 'Apple Wallet pass generated successfully!' : 'Google Wallet QR code generated successfully!';
+          _isGenerating = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = _walletResult!.message;
+          _isGenerating = false;
+        });
+      }
     } catch (e) {
-      String errorMessage = 'Error generating QR code: $e';
+      String errorMessage = 'Error generating wallet pass: $e';
 
       // Provide more specific error messages
       if (e.toString().contains('Failed to create loyalty card class')) {
-        errorMessage = 'Google Wallet setup issue. Please check your Google Cloud credentials and ensure the Wallet API is enabled.';
+        errorMessage = 'Wallet setup issue. Please check your credentials and ensure the APIs are enabled.';
       } else if (e.toString().contains('OAuth')) {
         errorMessage = 'Authentication failed. Please check your service account credentials.';
       } else if (e.toString().contains('JWT')) {
@@ -611,6 +686,48 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
         _errorMessage = errorMessage;
         _isGenerating = false;
       });
+    }
+  }
+
+  /// Check wallet availability on app startup
+  Future<void> _checkWalletAvailability() async {
+    try {
+      _walletAvailability = await _walletService.checkWalletAvailability();
+      log('Wallet availability: ${_walletAvailability?.message}');
+    } catch (e) {
+      log('Error checking wallet availability: $e');
+    }
+  }
+
+  /// Add pass to wallet
+  Future<void> _addToWallet() async {
+    if (_walletResult == null) return;
+
+    try {
+      final success = await _walletService.addPassToWallet(_walletResult!);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_walletResult!.type == WalletType.apple ? 'Pass added to Apple Wallet successfully!' : 'Opening Google Wallet...'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add pass to wallet'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding pass to wallet: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }
