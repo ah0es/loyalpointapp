@@ -26,7 +26,7 @@ class AppleWalletConfig {
 
   /// Certificate configuration
   /// Path to your P12 certificate file
-  static const String certificatePath = 'assets/certificates/pass_certificate.p12';
+  static const String certificatePath = 'assets/certificates/passcerp12.p12';
 
   /// Certificate password
   /// The password you set when exporting the P12 file
