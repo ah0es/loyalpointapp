@@ -13,7 +13,7 @@ class GitHubAppleWalletService {
   // Your actual GitHub repository details
   static const String _githubUsername = 'ah0es'; // Your GitHub username
   static const String _repositoryName = 'loyalpointapp'; // Your repository name
-  static const String _githubToken = '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'; // Replace with your new token
+  static const String _githubToken = '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'; // Replace with your new fine-grained token
 
   static String get _baseUrl => 'https://$_githubUsername.github.io/$_repositoryName/passes';
 
