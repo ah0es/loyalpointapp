@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 import '../models/loyalty_card.dart';
 import '../config/apple_wallet_config.dart';
+import 'pass_server.dart';
 
 /// Apple Wallet Service
 ///
@@ -17,7 +18,43 @@ import '../config/apple_wallet_config.dart';
 class AppleWalletService {
   final Uuid _uuid = const Uuid();
 
-  /// Generate Apple Wallet Pass
+  /// Generate Apple Wallet Pass URL
+  ///
+  /// Creates a URL that can be used in QR codes to add passes to Apple Wallet
+  /// Returns the URL that should be encoded in the QR code
+  Future<String> generatePassUrl({required String customerName, required int points}) async {
+    try {
+      log('🍎 Generating Apple Wallet pass URL...');
+      log('👤 Customer: $customerName');
+      log('⭐ Points: $points');
+
+      // Check configuration
+      if (!AppleWalletConfig.isConfigured) {
+        log('⚠️ Apple Wallet not fully configured: ${AppleWalletConfig.configurationStatus}');
+        log('⚠️ Generating placeholder Apple Wallet URL for testing...');
+      }
+
+      // Create loyalty card data
+      final loyaltyCard = await createLoyaltyCard(customerName: customerName, points: points);
+
+      // Generate pass data
+      final passData = _generatePassData(loyaltyCard);
+
+      // Create PKPass file
+      final passPath = await _createPKPassFile(passData, loyaltyCard);
+
+      // Generate Apple Wallet URL
+      final passUrl = await _generateAppleWalletUrl(passPath, loyaltyCard);
+
+      log('✅ Apple Wallet pass URL generated: $passUrl');
+      return passUrl;
+    } catch (e) {
+      log('❌ Error generating Apple Wallet pass URL: $e');
+      rethrow;
+    }
+  }
+
+  /// Generate Apple Wallet Pass (Legacy method)
   ///
   /// Creates a PKPass file that can be added to Apple Wallet
   /// Returns the file path of the generated .pkpass file
@@ -323,6 +360,44 @@ class AppleWalletService {
     } catch (e) {
       log('❌ Error checking Apple Wallet availability: $e');
       return false;
+    }
+  }
+
+  /// Generate Apple Wallet URL for QR codes
+  ///
+  /// Creates a URL that when scanned will open Apple Wallet
+  /// For testing, this will be a local file URL
+  /// In production, this should point to a web server
+  Future<String> _generateAppleWalletUrl(String passPath, LoyaltyCard loyaltyCard) async {
+    try {
+      // For testing: Use local file URL
+      // In production: Upload to web server and return public URL
+      final file = File(passPath);
+      final fileUri = file.uri.toString();
+
+      // Start local server for testing
+      final serverUrl = await PassServer.startServer();
+      final passId = loyaltyCard.id;
+      final appleWalletUrl = '$serverUrl/passes/$passId.pkpass';
+
+      // Copy pass file to server directory
+      final serverDir = Directory('passes');
+      if (!await serverDir.exists()) {
+        await serverDir.create(recursive: true);
+      }
+
+      final serverPassFile = File('passes/$passId.pkpass');
+      await file.copy(serverPassFile.path);
+
+      log('🔗 Apple Wallet URL: $appleWalletUrl');
+      log('📁 Local pass file: $fileUri');
+      log('🆔 Pass ID: $passId');
+      log('🌐 Server URL: $serverUrl');
+
+      return appleWalletUrl;
+    } catch (e) {
+      log('❌ Error generating Apple Wallet URL: $e');
+      rethrow;
     }
   }
 

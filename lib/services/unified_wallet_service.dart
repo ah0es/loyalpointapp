@@ -78,17 +78,17 @@ class UnifiedWalletService {
         throw Exception('Apple Wallet is not available on this device');
       }
 
-      // Generate pass file
-      final passPath = await _appleWalletService.generatePass(
+      // Generate pass URL for QR code
+      final passUrl = await _appleWalletService.generatePassUrl(
         customerName: customerName,
         points: points,
       );
 
       return WalletPassResult(
         type: WalletType.apple,
-        data: passPath,
+        data: passUrl,
         success: true,
-        message: 'Apple Wallet pass generated successfully',
+        message: 'Apple Wallet pass URL generated successfully',
       );
     } catch (e) {
       log('❌ Error generating Apple Wallet pass: $e');
