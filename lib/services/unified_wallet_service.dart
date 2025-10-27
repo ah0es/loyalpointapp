@@ -88,10 +88,10 @@ class UnifiedWalletService {
       );
     } catch (e) {
       log('❌ Error generating Apple Wallet pass: $e');
-      
+
       // Even when it fails, provide a fallback URL for QR display
       final fallbackUrl = 'https://ah0es.github.io/loyalpointapp/passes/error-${DateTime.now().millisecondsSinceEpoch}.pkpass';
-      
+
       return WalletPassResult(
         type: WalletType.apple,
         data: fallbackUrl,
