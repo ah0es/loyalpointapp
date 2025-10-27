@@ -10,7 +10,8 @@ import 'package:http/http.dart' as http;
 class SupabaseAppleWalletService {
   // Supabase configuration
   static const String _supabaseUrl = 'https://dtklhwerhtbzwaviegvq.supabase.co';
-  static const String _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0a2xod2VyaHRiendhdmllZ3ZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1ODMxODcsImV4cCI6MjA3NzE1OTE4N30.nTA24n7Pny_jTCJTo9P7-4H3f3oG4LpnZbLpcreTT0M';
+  static const String _supabaseAnonKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0a2xod2VyaHRiendhdmllZ3ZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1ODMxODcsImV4cCI6MjA3NzE1OTE4N30.nTA24n7Pny_jTCJTo9P7-4H3f3oG4LpnZbLpcreTT0M';
   static const String _bucketName = 'apple-wallet-passes';
 
   static String get _baseUrl => '$_supabaseUrl/storage/v1/object/public/$_bucketName';
