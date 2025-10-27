@@ -46,9 +46,15 @@ class SupabaseAppleWalletService {
         // Get the public URL
         final publicUrl = '$_baseUrl/$passId.pkpass';
         log('✅ File uploaded successfully to Supabase Storage');
+        log('📊 Uploaded file size: ${fileBytes.length} bytes');
         log('🔗 Public URL: $publicUrl');
+        log('📱 This URL should be accessible from Safari/Chrome');
         return publicUrl;
       } else {
+        log('❌ Supabase upload failed:');
+        log('   Status Code: ${response.statusCode}');
+        log('   Response Body: ${response.body}');
+        log('   File Size: ${fileBytes.length} bytes');
         throw Exception('Supabase Storage error: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {

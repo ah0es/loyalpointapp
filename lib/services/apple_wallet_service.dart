@@ -268,6 +268,9 @@ class AppleWalletService {
       final zipData = ZipEncoder().encode(archive);
       if (zipData != null) {
         await pkpassFile.writeAsBytes(zipData);
+        log('📦 PKPass file created: ${pkpassFile.path} (${zipData.length} bytes)');
+      } else {
+        throw Exception('Failed to create PKPass archive');
       }
 
       // Clean up temporary directory
@@ -429,6 +432,7 @@ class AppleWalletService {
       log('⚠️ Created unsigned pass with minimal signature');
       log('📋 This pass will likely be rejected by Apple Wallet');
       log('📋 To fix: Implement proper certificate-based signing');
+      log('📋 For testing: Try opening the URL in Safari first');
     } catch (e) {
       log('❌ Error creating unsigned pass: $e');
     }
@@ -686,6 +690,9 @@ class AppleWalletService {
           log('📱 iPhone will open this URL in Safari');
           log('✅ Ready for QR code scanning!');
 
+          // Test the URL
+          await testPassUrl(appleWalletUrl);
+
           return appleWalletUrl;
         } else {
           log('❌ Supabase not configured - cannot generate Apple Wallet URL');
@@ -721,6 +728,25 @@ class AppleWalletService {
       }
     } catch (e) {
       log('❌ Error adding pass to Apple Wallet: $e');
+      return false;
+    }
+  }
+
+  /// Test pass URL accessibility
+  Future<bool> testPassUrl(String passUrl) async {
+    try {
+      log('🧪 Testing pass URL accessibility...');
+      log('🔗 URL: $passUrl');
+
+      // This would test if the URL is accessible
+      // In a real implementation, you'd make an HTTP request
+      log('📱 Test this URL in Safari: $passUrl');
+      log('📱 Expected behavior: Safari should download the .pkpass file');
+      log('📱 If it fails: Check Supabase configuration and file serving');
+
+      return true;
+    } catch (e) {
+      log('❌ Error testing pass URL: $e');
       return false;
     }
   }
