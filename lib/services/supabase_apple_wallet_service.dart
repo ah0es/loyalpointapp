@@ -1,6 +1,5 @@
 import 'dart:developer';
 import 'dart:io';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 /// Supabase Apple Wallet Service
@@ -38,6 +37,7 @@ class SupabaseAppleWalletService {
         headers: {
           'Authorization': 'Bearer $_supabaseAnonKey',
           'Content-Type': 'application/vnd.apple.pkpass',
+          'Cache-Control': 'no-cache',
         },
         body: fileBytes,
       );
