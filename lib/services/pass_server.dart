@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:developer';
 import 'dart:convert';
+import 'package:path_provider/path_provider.dart';
 
 /// Simple HTTP Server for serving Apple Wallet passes
 ///
@@ -138,8 +139,9 @@ class PassServer {
 
   /// Get documents directory
   static Future<Directory> _getDocumentsDirectory() async {
-    // For testing, use a local directory
-    final dir = Directory('passes');
+    // Use the same path as the Apple Wallet service
+    final documentsDir = await getApplicationDocumentsDirectory();
+    final dir = Directory('${documentsDir.path}/passes');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }

@@ -380,13 +380,14 @@ class AppleWalletService {
       final passId = loyaltyCard.id;
       final appleWalletUrl = '$serverUrl/passes/$passId.pkpass';
 
-      // Copy pass file to server directory
-      final serverDir = Directory('passes');
+      // Copy pass file to server directory using proper iOS path
+      final documentsDir = await getApplicationDocumentsDirectory();
+      final serverDir = Directory('${documentsDir.path}/passes');
       if (!await serverDir.exists()) {
         await serverDir.create(recursive: true);
       }
 
-      final serverPassFile = File('passes/$passId.pkpass');
+      final serverPassFile = File('${serverDir.path}/$passId.pkpass');
       await file.copy(serverPassFile.path);
 
       log('🔗 Apple Wallet URL: $appleWalletUrl');

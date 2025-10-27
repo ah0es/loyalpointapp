@@ -384,8 +384,10 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
                         color: _walletResult!.type == WalletType.apple ? Colors.black : const Color(0xFF4285F4), size: 24),
                   ),
                   const SizedBox(width: 16),
-                  Text(_walletResult!.type == WalletType.apple ? 'Apple Wallet Pass' : 'Google Wallet QR Code',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: Text(_walletResult!.type == WalletType.apple ? 'Apple Wallet Pass' : 'Google Wallet QR Code',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
