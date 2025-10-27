@@ -157,7 +157,7 @@ class GitHubAppleWalletService {
 
   /// Check if GitHub is properly configured
   static bool get isConfigured {
-    return _githubUsername == 'ah0es' && _repositoryName == 'loyalpointapp' && _githubToken != 'your-token';
+    return _githubUsername == 'ah0es' && _repositoryName == 'loyalpointapp' && _githubToken != 'YOUR_GITHUB_TOKEN_HERE';
   }
 
   /// Get setup instructions
@@ -171,6 +171,8 @@ GitHub Configuration Complete! 🎉
 Your Apple Wallet passes will be available at:
 https://ah0es.github.io/loyalpointapp/passes/
 
-Ready to upload .pkpass files to GitHub!
+Next steps:
+1. Create 'passes' folder in your repository root
+2. Test the app - QR codes will now upload to GitHub!
 ''';
 }
