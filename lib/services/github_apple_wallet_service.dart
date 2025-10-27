@@ -13,7 +13,7 @@ class GitHubAppleWalletService {
   // Your actual GitHub repository details
   static const String _githubUsername = 'ah0es'; // Your GitHub username
   static const String _repositoryName = 'loyalpointapp'; // Your repository name
-  static const String _githubToken = 'your-token'; // Your GitHub personal access token (replace this)
+  static const String _githubToken = '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'; // Your GitHub personal access token
 
   static String get _baseUrl => 'https://$_githubUsername.github.io/$_repositoryName/passes';
 
@@ -157,27 +157,22 @@ class GitHubAppleWalletService {
 
   /// Check if GitHub is properly configured
   static bool get isConfigured {
-    return _githubUsername == 'ah0es' && _repositoryName == 'loyalpointapp' && _githubToken != 'your-token';
+    return _githubUsername == 'ah0es' && _repositoryName == 'loyalpointapp' && _githubToken == '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';
   }
 
   /// Get setup instructions
   static String get setupInstructions => '''
-GitHub Configuration Required:
+GitHub Configuration Complete! 🎉
 
 ✅ GitHub Username: ah0es (configured)
 ✅ Repository Name: loyalpointapp (configured)
-❌ GitHub Personal Access Token: (replace 'your-token')
-
-To get your GitHub token:
-- Go to GitHub.com → Settings → Developer settings → Personal access tokens
-- Generate new token (classic)
-- Select scopes: repo (full control)
-- Copy the token
-
-4. Create 'passes' folder in your repository root
-5. Replace 'your-token' with your actual token
+✅ GitHub Personal Access Token: (configured)
 
 Your Apple Wallet passes will be available at:
 https://ah0es.github.io/loyalpointapp/passes/
+
+Next steps:
+1. Create 'passes' folder in your repository root
+2. Test the app - QR codes will now upload to GitHub!
 ''';
 }
