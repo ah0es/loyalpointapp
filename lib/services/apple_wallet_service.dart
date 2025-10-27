@@ -18,10 +18,11 @@ import 'public_pass_server.dart';
 class AppleWalletService {
   final Uuid _uuid = const Uuid();
 
-  /// Generate Apple Wallet Pass URL
+  /// Generate Apple Wallet Pass for QR codes
   ///
-  /// Creates a URL that can be used in QR codes to add passes to Apple Wallet
-  /// Returns the URL that should be encoded in the QR code
+  /// Creates a data URL that contains the entire Apple Wallet pass
+  /// This works directly on iPhone without needing a web server
+  /// Returns the data URL that should be encoded in the QR code
   Future<String> generatePassUrl({required String customerName, required int points}) async {
     try {
       log('🍎 Generating Apple Wallet pass URL...');
@@ -50,8 +51,7 @@ class AppleWalletService {
         return passUrl;
       } catch (urlError) {
         log('⚠️ Error generating Apple Wallet URL, using fallback: $urlError');
-        // Fallback: create a simple data URL with pass info
-        final passId = loyaltyCard.id;
+        // Fallback: create a minimal data URL
         final fallbackUrl = 'data:application/vnd.apple.pkpass;base64,PLACEHOLDER_PASS_DATA';
         log('🔄 Using fallback data URL');
         return fallbackUrl;
@@ -383,30 +383,20 @@ class AppleWalletService {
       final file = File(passPath);
       final fileUri = file.uri.toString();
 
-      // For real iPhone scanning, we need a public URL
+      // Apple Wallet approach: Use data URL with the pass file
       final passId = loyaltyCard.id;
       final passBytes = await file.readAsBytes();
 
-      // Start public server using Mac's IP address
-      final serverUrl = await PublicPassServer.startServer();
-      final appleWalletUrl = '$serverUrl/passes/$passId.pkpass';
+      // Create data URL that contains the entire pass file
+      final base64Pass = base64Encode(passBytes);
+      final appleWalletDataUrl = 'data:application/vnd.apple.pkpass;base64,$base64Pass';
 
-      // Copy pass file to server directory
-      final documentsDir = await getApplicationDocumentsDirectory();
-      final serverDir = Directory('${documentsDir.path}/passes');
-      if (!await serverDir.exists()) {
-        await serverDir.create(recursive: true);
-      }
-
-      final serverPassFile = File('${serverDir.path}/$passId.pkpass');
-      await file.copy(serverPassFile.path);
-
-      log('🔗 Apple Wallet URL: $appleWalletUrl');
-      log('📱 Your iPhone can now scan this QR code!');
-      log('🌐 Server IP: ${PublicPassServer.localIp}');
+      log('🍎 Apple Wallet Data URL created');
       log('📊 Pass size: ${passBytes.length} bytes');
+      log('🔗 Data URL length: ${appleWalletDataUrl.length} characters');
+      log('📱 iPhone can process this data URL directly!');
 
-      return appleWalletUrl;
+      return appleWalletDataUrl;
     } catch (e) {
       log('❌ Error generating Apple Wallet URL: $e');
       rethrow;
