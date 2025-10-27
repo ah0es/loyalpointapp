@@ -142,7 +142,9 @@ class UnifiedWalletService {
 
       switch (result.type) {
         case WalletType.apple:
-          return await _appleWalletService.addPassToWallet(result.data!);
+          // For Apple Wallet, we don't need to add directly - the URL is for QR scanning
+          log('🍎 Apple Wallet URL generated for QR scanning: ${result.data}');
+          return true;
         case WalletType.google:
           return await _googleWalletService.launchSaveUrl(result.data!);
       }
