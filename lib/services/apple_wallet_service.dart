@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 import '../models/loyalty_card.dart';
 import '../config/apple_wallet_config.dart';
-import 'pass_server.dart';
+import 'public_pass_server.dart';
 
 /// Apple Wallet Service
 ///
@@ -50,10 +50,10 @@ class AppleWalletService {
         return passUrl;
       } catch (urlError) {
         log('⚠️ Error generating Apple Wallet URL, using fallback: $urlError');
-        // Fallback: return a simple URL that can be used for testing
+        // Fallback: create a simple data URL with pass info
         final passId = loyaltyCard.id;
-        final fallbackUrl = 'https://yourcompany.com/passes/$passId.pkpass';
-        log('🔄 Using fallback URL: $fallbackUrl');
+        final fallbackUrl = 'data:application/vnd.apple.pkpass;base64,PLACEHOLDER_PASS_DATA';
+        log('🔄 Using fallback data URL');
         return fallbackUrl;
       }
     } catch (e) {
@@ -383,32 +383,28 @@ class AppleWalletService {
       final file = File(passPath);
       final fileUri = file.uri.toString();
 
-      // Start local server for testing
-      final serverUrl = await PassServer.startServer();
+      // For real iPhone scanning, we need a public URL
       final passId = loyaltyCard.id;
+      final passBytes = await file.readAsBytes();
+
+      // Start public server using Mac's IP address
+      final serverUrl = await PublicPassServer.startServer();
       final appleWalletUrl = '$serverUrl/passes/$passId.pkpass';
 
-      // Copy pass file to server directory using proper iOS path
+      // Copy pass file to server directory
       final documentsDir = await getApplicationDocumentsDirectory();
       final serverDir = Directory('${documentsDir.path}/passes');
-      log('📁 Documents directory: ${documentsDir.path}');
-      log('📁 Server directory: ${serverDir.path}');
-
       if (!await serverDir.exists()) {
-        log('📁 Creating server directory...');
         await serverDir.create(recursive: true);
-        log('✅ Server directory created');
       }
 
       final serverPassFile = File('${serverDir.path}/$passId.pkpass');
-      log('📁 Copying pass file to: ${serverPassFile.path}');
       await file.copy(serverPassFile.path);
-      log('✅ Pass file copied successfully');
 
       log('🔗 Apple Wallet URL: $appleWalletUrl');
-      log('📁 Local pass file: $fileUri');
-      log('🆔 Pass ID: $passId');
-      log('🌐 Server URL: $serverUrl');
+      log('📱 Your iPhone can now scan this QR code!');
+      log('🌐 Server IP: ${PublicPassServer.localIp}');
+      log('📊 Pass size: ${passBytes.length} bytes');
 
       return appleWalletUrl;
     } catch (e) {
