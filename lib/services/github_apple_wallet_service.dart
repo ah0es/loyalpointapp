@@ -17,6 +17,45 @@ class GitHubAppleWalletService {
 
   static String get _baseUrl => 'https://$_githubUsername.github.io/$_repositoryName/passes';
 
+  /// Ensure the passes folder exists in the repository
+  static Future<void> _ensurePassesFolderExists() async {
+    try {
+      // Check if passes folder exists by trying to get its contents
+      final response = await http.get(
+        Uri.parse('https://api.github.com/repos/$_githubUsername/$_repositoryName/contents/passes'),
+        headers: {'Authorization': 'token $_githubToken'},
+      );
+
+      if (response.statusCode == 404) {
+        // Folder doesn't exist, create it by adding a README file
+        log('📁 Creating passes folder...');
+        final readmeContent = base64Encode(utf8.encode('# Passes Folder\n\nThis folder contains Apple Wallet passes.'));
+        final createResponse = await http.put(
+          Uri.parse('https://api.github.com/repos/$_githubUsername/$_repositoryName/contents/passes/README.md'),
+          headers: {
+            'Authorization': 'token $_githubToken',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'message': 'Create passes folder',
+            'content': readmeContent,
+            'branch': 'main',
+          }),
+        );
+
+        if (createResponse.statusCode == 201) {
+          log('✅ Passes folder created successfully');
+        } else {
+          log('⚠️ Failed to create passes folder: ${createResponse.statusCode}');
+        }
+      } else if (response.statusCode == 200) {
+        log('✅ Passes folder already exists');
+      }
+    } catch (e) {
+      log('⚠️ Error checking/creating passes folder: $e');
+    }
+  }
+
   /// Upload .pkpass file to GitHub repository
   ///
   /// Returns the public URL that can be used in QR codes
@@ -25,6 +64,9 @@ class GitHubAppleWalletService {
       log('📤 Uploading .pkpass file to GitHub...');
       log('📁 Local file: $localFilePath');
       log('🆔 Pass ID: $passId');
+
+      // First, ensure the passes folder exists
+      await _ensurePassesFolderExists();
 
       // Read the file
       final file = File(localFilePath);
