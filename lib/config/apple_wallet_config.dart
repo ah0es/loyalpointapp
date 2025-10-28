@@ -13,10 +13,10 @@ class AppleWalletConfig {
   /// Your Pass Type ID
   /// Format: pass.com.yourcompany.loyalty
   /// Created in: Apple Developer Portal > Identifiers > Pass Type IDs
-  static const String passTypeId = 'pass.com.urub7ffttd.loyalty';
+  static const String passTypeId = 'pass.com.gemma.loyalty';
 
   /// Your organization name
-  static const String organizationName = 'Loyalty App';
+  static const String organizationName = 'GEMMA TECHNOLOGY COMPANY WLL';
 
   /// Pass name displayed in Apple Wallet
   static const String passName = 'Loyalty Card';

@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 /// Supabase Apple Wallet Service
@@ -60,6 +61,7 @@ class SupabaseAppleWalletService {
           'Content-Type': 'application/vnd.apple.pkpass',
           'Cache-Control': 'no-cache',
           'Content-Disposition': 'attachment; filename="$passId.pkpass"',
+          'x-upsert': 'true',
         },
         body: fileBytes,
       );
@@ -71,6 +73,7 @@ class SupabaseAppleWalletService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Get the public URL
         final publicUrl = '$_baseUrl/$passId.pkpass';
+        final downloadUrl = '$publicUrl?download=$passId.pkpass';
         log('✅ File uploaded successfully to Supabase Storage');
         log('📊 Uploaded file size: ${fileBytes.length} bytes');
         log('🔗 Public URL: $publicUrl');
@@ -93,7 +96,7 @@ class SupabaseAppleWalletService {
           log('⚠️ Error testing public URL: $e');
         }
 
-        return publicUrl;
+        return downloadUrl;
       } else {
         log('❌ Supabase upload failed:');
         log('   Status Code: ${response.statusCode}');
@@ -104,6 +107,53 @@ class SupabaseAppleWalletService {
       }
     } catch (e) {
       log('❌ Error uploading to Supabase Storage: $e');
+      rethrow;
+    }
+  }
+
+  /// Upload .pkpass bytes directly (useful on Web where no filesystem exists)
+  static Future<String> uploadPassBytes(Uint8List fileBytes, String passId) async {
+    try {
+      log('📤 Uploading .pkpass bytes to Supabase Storage...');
+      log('🆔 Pass ID: $passId');
+
+      if (fileBytes.isEmpty) {
+        throw Exception('PKPass bytes are empty');
+      }
+
+      // Basic ZIP signature check
+      if (!(fileBytes.length >= 2 && fileBytes[0] == 0x50 && fileBytes[1] == 0x4B)) {
+        log('⚠️ Bytes do not start with ZIP signature, continuing anyway');
+      }
+
+      final uploadUrl = '$_supabaseUrl/storage/v1/object/$_bucketName/$passId.pkpass';
+      final response = await http.post(
+        Uri.parse(uploadUrl),
+        headers: {
+          'Authorization': 'Bearer $_supabaseAnonKey',
+          'Content-Type': 'application/vnd.apple.pkpass',
+          'Cache-Control': 'no-cache',
+          'Content-Disposition': 'attachment; filename="$passId.pkpass"',
+        },
+        body: fileBytes,
+      );
+
+      log('📊 Upload response status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final publicUrl = '$_baseUrl/$passId.pkpass';
+        // Verify content-type after upload
+        try {
+          final check = await http.head(Uri.parse(publicUrl));
+          log('📊 Public HEAD status: ${check.statusCode}');
+          log('📊 Public content-type: ${check.headers['content-type']}');
+        } catch (_) {}
+        return publicUrl;
+      } else {
+        throw Exception('Supabase Storage error: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      log('❌ Error uploading bytes to Supabase Storage: $e');
       rethrow;
     }
   }
@@ -123,6 +173,16 @@ class SupabaseAppleWalletService {
       return publicUrl;
     } catch (e) {
       log('❌ Error generating Apple Wallet URL: $e');
+      rethrow;
+    }
+  }
+
+  /// Generate Apple Wallet URL from in-memory bytes (for Web)
+  static Future<String> generateAppleWalletUrlFromBytes(Uint8List fileBytes, String passId) async {
+    try {
+      return await uploadPassBytes(fileBytes, passId);
+    } catch (e) {
+      log('❌ Error generating Apple Wallet URL from bytes: $e');
       rethrow;
     }
   }

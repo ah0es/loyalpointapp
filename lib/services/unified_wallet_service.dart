@@ -42,18 +42,9 @@ class UnifiedWalletService {
   }) async {
     try {
       final platform = _getPlatformName();
-      log('🎯 Generating wallet pass for platform: $platform');
-
-      if (_isIOS()) {
-        // Try Apple Wallet first
-        final appleResult = await _generateAppleWalletPass(customerName: customerName, points: points);
-
-        // Always return Apple Wallet result for iOS, even if it fails
-        // The UI will handle showing the error and QR code
-        return appleResult;
-      } else {
-        return await _generateGoogleWalletPass(customerName: customerName, points: points);
-      }
+      log('🎯 Generating wallet pass (Apple-first) for platform: $platform');
+      // Always generate Apple Wallet URL (QR-based, works cross-device)
+      return await _generateAppleWalletPass(customerName: customerName, points: points);
     } catch (e) {
       log('❌ Error generating wallet pass: $e');
       rethrow;
@@ -66,23 +57,25 @@ class UnifiedWalletService {
     required int points,
   }) async {
     try {
-      log('🍎 Generating Apple Wallet pass...');
-
-      // Check if Apple Wallet is available
-      final isAvailable = await _appleWalletService.isAvailable();
-      if (!isAvailable) {
-        throw Exception('Apple Wallet is not available on this device');
-      }
-
-      // Generate pass URL for QR code
+      log('🍎 Generating Apple Wallet pass URL...');
+      // Generate pass URL for QR code (no availability check, QR works cross-device)
       final passUrl = await _appleWalletService.generatePassUrl(
         customerName: customerName,
         points: points,
       );
 
+      // Ensure download parameter for iOS Safari
+      final uri = Uri.parse(passUrl);
+      final normalizedUrl = uri.queryParameters.containsKey('download')
+          ? passUrl
+          : uri.replace(queryParameters: {
+              ...uri.queryParameters,
+              'download': 'loyalty-card.pkpass',
+            }).toString();
+
       return WalletPassResult(
         type: WalletType.apple,
-        data: passUrl,
+        data: normalizedUrl,
         success: true,
         message: 'Apple Wallet pass URL generated successfully',
       );
@@ -101,36 +94,7 @@ class UnifiedWalletService {
     }
   }
 
-  /// Generate Google Wallet pass
-  Future<WalletPassResult> _generateGoogleWalletPass({
-    required String customerName,
-    required int points,
-  }) async {
-    try {
-      log('🔵 Generating Google Wallet pass...');
-
-      // Generate Save URL
-      final saveUrl = await _googleWalletService.generateSaveUrl(
-        customerName: customerName,
-        points: points,
-      );
-
-      return WalletPassResult(
-        type: WalletType.google,
-        data: saveUrl,
-        success: true,
-        message: 'Google Wallet Save URL generated successfully',
-      );
-    } catch (e) {
-      log('❌ Error generating Google Wallet pass: $e');
-      return WalletPassResult(
-        type: WalletType.google,
-        data: null,
-        success: false,
-        message: 'Failed to generate Google Wallet pass: $e',
-      );
-    }
-  }
+  // Google Wallet generation disabled for Apple-only testing
 
   /// Add pass to wallet
   Future<bool> addPassToWallet(WalletPassResult result) async {
@@ -148,12 +112,8 @@ class UnifiedWalletService {
 
       switch (result.type) {
         case WalletType.apple:
-          // For Apple Wallet, open the URL in Safari
-          log('🍎 Opening Apple Wallet pass in Safari: ${result.data}');
-          log('🍎 Calling _appleWalletService.openPassInSafari...');
-          final success = await _appleWalletService.openPassInSafari(result.data!);
-          log('🍎 openPassInSafari result: $success');
-          return success;
+          // For Apple Wallet, we now only generate a URL for QR; nothing to open here
+          return true;
         case WalletType.google:
           log('🤖 Opening Google Wallet pass: ${result.data}');
           return await _googleWalletService.launchSaveUrl(result.data!);
@@ -171,11 +131,12 @@ class UnifiedWalletService {
     required int points,
   }) async {
     try {
-      log('🍎 Opening Apple Wallet pass in Safari...');
-      return await _appleWalletService.generateAndOpenPass(
+      log('🍎 Generating Apple Wallet pass URL (no auto-open)...');
+      await _appleWalletService.generatePassUrl(
         customerName: customerName,
         points: points,
       );
+      return true;
     } catch (e) {
       log('❌ Error opening Apple Wallet pass: $e');
       return false;
@@ -186,11 +147,10 @@ class UnifiedWalletService {
   Future<WalletAvailability> checkWalletAvailability() async {
     try {
       if (_isIOS()) {
-        final isAvailable = await _appleWalletService.isAvailable();
         return WalletAvailability(
           type: WalletType.apple,
-          isAvailable: isAvailable,
-          message: isAvailable ? 'Apple Wallet is available' : 'Apple Wallet is not available on this device',
+          isAvailable: true,
+          message: 'Apple Wallet is available',
         );
       } else {
         // For Google Wallet, we assume it's available if we can generate URLs
@@ -227,6 +187,14 @@ class UnifiedWalletService {
   /// Get card preview data
   Map<String, dynamic> getCardPreview({required String customerName, required int points}) {
     return _googleWalletService.getCardPreview(customerName: customerName, points: points);
+  }
+
+  /// For Windows testing: generate Apple Wallet pass URL directly (ignores platform)
+  Future<String> generateApplePassUrlForTesting({
+    required String customerName,
+    required int points,
+  }) async {
+    return _appleWalletService.generatePassUrl(customerName: customerName, points: points);
   }
 }
 

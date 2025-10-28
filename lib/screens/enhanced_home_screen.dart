@@ -427,6 +427,13 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
                   style: TextStyle(fontSize: 16, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 12),
+                // Show the pkpass URL under the QR for easy copying
+                SelectableText(
+                  _walletResult!.data!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
               ],
               const SizedBox(height: 24),
               Row(
@@ -448,18 +455,18 @@ class _EnhancedHomeScreenState extends State<EnhancedHomeScreen> with TickerProv
                       ),
                     ),
                   ),
-                  if (_walletResult!.type == WalletType.google && _walletResult!.data != null) ...[
+                  if ((_walletResult!.type == WalletType.google || _walletResult!.type == WalletType.apple) && _walletResult!.data != null) ...[
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: _walletResult!.data!));
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Save URL copied to clipboard!')));
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('URL copied to clipboard!')));
                         },
                         icon: const Icon(Icons.copy),
                         label: const Text('Copy URL'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4285F4),
+                          backgroundColor: _walletResult!.type == WalletType.apple ? Colors.black : const Color(0xFF4285F4),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
