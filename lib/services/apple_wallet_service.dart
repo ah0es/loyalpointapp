@@ -52,6 +52,14 @@ class AppleWalletService {
       log('   Background Color: ${loyaltyCard.backgroundColor}');
       log('   Logo URL: ${loyaltyCard.logoUrl}');
 
+      // Validate critical fields
+      log('🔍 Validating critical fields:');
+      log('   ID format: ${loyaltyCard.id.length == 36 ? '✅ Valid UUID' : '❌ Invalid UUID (${loyaltyCard.id.length} chars)'}');
+      log('   Class ID format: ${loyaltyCard.classId.startsWith('pass.') ? '✅ Valid Pass Type ID' : '❌ Invalid Pass Type ID'}');
+      log('   Barcode Value: ${loyaltyCard.barcodeValue == loyaltyCard.id ? '✅ Matches ID' : '❌ Does not match ID'}');
+      log('   Barcode Type: ${loyaltyCard.barcode.type}');
+      log('   Barcode Alt Text: ${loyaltyCard.barcode.alternateText}');
+
       // Generate pass data
       log('🔧 Generating pass data from loyalty card...');
       final passData = _generatePassData(loyaltyCard);
@@ -93,7 +101,27 @@ class AppleWalletService {
       // Create loyalty card data
       final loyaltyCard = await createLoyaltyCard(customerName: customerName, points: points);
 
+      // Log loyalty card data before generating pass
+      log('📋 Loyalty Card Data:');
+      log('   ID: ${loyaltyCard.id}');
+      log('   Class ID: ${loyaltyCard.classId}');
+      log('   Customer: ${loyaltyCard.customerName}');
+      log('   Points: ${loyaltyCard.points}');
+      log('   Level: ${loyaltyCard.level}');
+      log('   Barcode Value: ${loyaltyCard.barcodeValue}');
+      log('   Background Color: ${loyaltyCard.backgroundColor}');
+      log('   Logo URL: ${loyaltyCard.logoUrl}');
+
+      // Validate critical fields
+      log('🔍 Validating critical fields:');
+      log('   ID format: ${loyaltyCard.id.length == 36 ? '✅ Valid UUID' : '❌ Invalid UUID (${loyaltyCard.id.length} chars)'}');
+      log('   Class ID format: ${loyaltyCard.classId.startsWith('pass.') ? '✅ Valid Pass Type ID' : '❌ Invalid Pass Type ID'}');
+      log('   Barcode Value: ${loyaltyCard.barcodeValue == loyaltyCard.id ? '✅ Matches ID' : '❌ Does not match ID'}');
+      log('   Barcode Type: ${loyaltyCard.barcode.type}');
+      log('   Barcode Alt Text: ${loyaltyCard.barcode.alternateText}');
+
       // Generate pass data
+      log('🔧 Generating pass data from loyalty card...');
       final passData = _generatePassData(loyaltyCard);
 
       // Create PKPass file
@@ -131,7 +159,7 @@ class AppleWalletService {
         cardTitle: 'Loyalty Card',
         header: customerName,
         backgroundColor: _getCardColor(level),
-        logoUrl: AppleWalletConfig.website, // Use website as fallback, should be replaced with actual logo
+        logoUrl: 'assets/images/apple_wallet/logo.png', // Use local asset path
         textModules: [
           TextModule(id: 'points', header: 'POINTS', body: points.toString()),
           TextModule(id: 'level', header: 'LEVEL', body: level),
@@ -228,6 +256,27 @@ class AppleWalletService {
     log('📊 Pass data keys: ${passData.keys.toList()}');
     log('📊 Store card fields: ${(passData['storeCard'] as Map<String, dynamic>).keys.toList()}');
     log('📊 Barcodes: ${(passData['barcodes'] as List).length} barcode(s)');
+
+    // Detailed barcode validation
+    final barcodes = passData['barcodes'] as List;
+    for (int i = 0; i < barcodes.length; i++) {
+      final barcode = barcodes[i] as Map<String, dynamic>;
+      log('📊 Barcode $i:');
+      log('   Message: ${barcode['message']}');
+      log('   Format: ${barcode['format']}');
+      log('   Encoding: ${barcode['messageEncoding']}');
+      log('   Alt Text: ${barcode['altText']}');
+    }
+
+    // Validate pass.json critical fields
+    log('🔍 Pass.json validation:');
+    log('   Serial Number: ${passData['serialNumber']}');
+    log('   Pass Type ID: ${passData['passTypeIdentifier']}');
+    log('   Team ID: ${passData['teamIdentifier']}');
+    log('   Organization: ${passData['organizationName']}');
+    log('   Description: ${passData['description']}');
+    log('   Web Service URL: ${passData['webServiceURL']}');
+    log('   Auth Token: ${passData['authenticationToken']}');
 
     return passData;
   }
